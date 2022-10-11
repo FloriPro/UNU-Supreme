@@ -1,0 +1,92 @@
+#playerList {
+    display: flex;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+}
+
+html,
+body {
+    overflow-x: hidden
+}
+
+.player {
+    padding-right: 10px;
+}
+
+.playerCard {
+    margin-right: -10px;
+    width: 35px;
+    height: auto;
+}
+
+@keyframes fadeIn {
+    0% {
+        width: 0;
+    }
+
+    100% {
+        width: 86;
+    }
+}
+
+@keyframes moveIn {
+    0% {
+        margin-top: -100%;
+    }
+
+    100% {
+        margin-top: 0%;
+    }
+}
+
+@keyframes moveInBottom {
+    0% {
+        height: 0%;
+    }
+
+    100% {
+        margin-bottom: 129;
+    }
+}
+
+* {
+    transition: width 0.5s cubic-bezier(0, 0.78, 0.58, 1);
+}
+
+.center {
+    display: flex;
+    justify-content: space-around;
+}
+
+.ownDeck {
+    margin-right: -45px;
+}
+
+.ownDeck:hover {
+    filter: drop-shadow(2px 4px 6px black);
+}
+
+/* The alert message box */
+.alert {
+    padding: 5px;
+    background-color: #36f43f;
+    /* Red */
+    color: rgb(0, 0, 0);
+    margin-bottom: 15px;
+    margin-top: 0;
+    font-size: 20px;
+}
+
+.closebtn {
+    margin-left: 15px;
+    color: rgb(0, 0, 0);
+    font-weight: bold;
+    float: right;
+    font-size: 20px;
+    cursor: pointer;
+}
+
+.closebtn:hover {
+    color: rgb(255, 255, 255);
+    transition: 1s;
+}

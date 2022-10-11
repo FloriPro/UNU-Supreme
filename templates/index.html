@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>UNO Supreme</title>
+    <script>
+        window.onerror = function (error, url, line) {
+            addMessage("Error:" + error + ' URL:' + url + ' L:' + line);
+        };
+    </script>
+    <script src="{{ url_for('static', filename='main.js') }}"></script>
+    <script defer src="{{ url_for('static', filename='connection.js') }}"></script>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+
+<body>
+    <div id="colorInput" style="
+    height: 100%;
+    width: 100%;
+    position: fixed;
+    top: 0px;
+    left: 0px;
+    background-color: rgba(0, 0, 0, 0.288);
+    display: none;
+    align-content: center;
+    justify-content: space-evenly;
+    align-items: center;
+    z-index: 2;">
+        <div style="background-color: white; padding: 10px;">
+            <h1>Farbe auswählen</h1>
+            <button onclick="selectColor('red')">Rot</button>
+            <button onclick="selectColor('green')">Grün</button>
+            <button onclick="selectColor('yellow')">Gelb</button>
+            <button onclick="selectColor('blue')">Blau</button>
+        </div>
+    </div>
+    <div id="twoxInput" style="
+    height: 100%;
+    width: 100%;
+    position: fixed;
+    top: 0px;
+    left: 0px;
+    background-color: rgba(0, 0, 0, 0.288);
+    display: none;
+    align-content: center;
+    justify-content: space-evenly;
+    align-items: center;
+    z-index: 2;">
+        <div style="background-color: white; padding: 10px;">
+            <div id="twoxinputPositions">
+
+            </div>
+            <button id="withdrawTwo" onclick="ws.send(JSON.stringify({'type':'withdraw2x'}))">2 Ziehen</button>
+        </div>
+    </div>
+    <p id="connected_status" style="background-color: red;">Nicht verbunden!</p>
+    <div id="alerts" style="right: 0;position: fixed;max-width: 200px;min-width: 50px;z-index: 999999;"></div>
+    <p id="status">Status: </p>
+    <div id="nameInput" style="display: none;">
+        <input type="text" id="nameInputInput">
+        <button
+            onclick='ws.send(JSON.stringify({ "type": "get_name", "dat": document.querySelector("#nameInputInput").value }))'>
+            Namen setzen</button>
+    </div>
+    <p>Spieler:</p>
+    <div id="playerList"></div>
+
+    <div style="display:flex;justify-content: space-around;flex-wrap: nowrap;">
+        <div id="drawCard" onclick='ws.send(JSON.stringify({"type":"drawCard"}))' style="height: 142px;">
+            <!--<img src="static/cards/back.png" style="width: 86px; position:absolute;">-->
+        </div>
+        <div id="stapel" class="center"></div>
+    </div>
+
+    <div id="deck"></div>
+
+    <button onclick='ws.send(JSON.stringify({"type":"start_game"}))'>Spiel starten</button>
+</body>
+
+</html>
