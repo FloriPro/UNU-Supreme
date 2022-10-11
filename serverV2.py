@@ -1,6 +1,8 @@
+from math import ceil, floor
+import re
 from threading import Thread
 import asyncio
-from time import sleep
+from time import sleep, time
 from simple_websocket_server import WebSocketServer, WebSocket
 from re import S
 from tkinter import W
@@ -9,7 +11,7 @@ import threading
 import random
 import json
 from flask import Flask
-from flask import render_template
+from flask import render_template, request
 
 app = Flask(__name__)
 app.config['TEMPLATES_AUTO_RELOAD'] = True
@@ -20,6 +22,40 @@ app.config.from_object(__name__)
 @app.route('/')
 def projects():
     return render_template("index.html", title='UNO Supreme')
+
+
+@app.route("/consoleEval", methods=["POST"])
+def runCommand():
+    global master
+    command = request.data.decode("UTF-8").split(" ")
+    if command[0] == "players":
+        returnDat = []
+        for player in master.players:
+            if player in master.playerNames.keys():
+                name = master.playerNames[player]
+            else:
+                name = "undefined"
+            returnDat.append(name+": "+str(player))
+            pass
+        return ",\n".join(returnDat)
+    elif command[0] == "give":
+        if int(command[2]) not in master.playerDeck.keys():
+            return "player doesn't exist"
+        master.playerDeck[int(command[2])].append(command[1])
+        master.addEvent(int(command[2]),
+                        {"type": "action", "dat": {
+                            "type": "addCard",
+                            "dat": command[1]
+
+                        }})
+        master.easyEvents("playerCardCount")
+        return "ok!"
+    return "command did not return"
+
+
+@app.route('/console')
+def console():
+    return render_template("console.html", title='Debug console')
 
 
 cards = {"red":    {2: ["2+", "aussetzen", "richtungswechsel", "1", "2", "3", "4", "5", "6", "7", "8", "9", "komunist"]},
@@ -34,7 +70,13 @@ for color in cards.keys():
         for i in range(numbers):
             for cardType in cards[color][numbers]:
                 deck.append(color+"_"+cardType)
+
 deck += deck
+deck += deck
+deck += deck
+deck += deck
+
+startCardCount = 2
 
 
 class gameMaster:
@@ -62,7 +104,7 @@ class gameMaster:
         iteration = 0
         for playerId in self.players:
             self.playerDeck[playerId] = []
-            for i in range(2):
+            for i in range(startCardCount):
                 choice = random.randint(0, len(self.availableCards)-1)
                 self.playerDeck[playerId].append(self.availableCards[choice])
                 self.availableCards.pop(choice)
@@ -153,7 +195,22 @@ class gameMaster:
                 if ok:
                     if c[1] == "richtungswechsel":
                         self.direction = self.direction*-1
-                        pass
+                    if c[1] == "komunist":
+                        self.playerDeck[playerId].remove(card[0])
+                        self.addEvent(
+                            playerId, {"type": "action", "dat": "removeCard", "dat2": card[0]})
+
+                        self.lyingCards.append(card[0])
+                        self.easyEvents("cardAdd", card[0])
+
+                        self.playerClasses[playerId].send_message(json.dumps(
+                            {"type": "message", "dat": "Karte gelegt!"}))
+                        self.addEvents(
+                            {"type": "message", "dat": "Karten werden neu gemischt....."})
+
+                        threading.Thread(target=self.komunist,
+                                         daemon=True).start()
+                        return
                     if c[1] == "farbwechsel" or c[1] == "farbwechsel4+":
                         self.cardCache = card[0]
                         self.playerClasses[playerId].send_message(json.dumps(
@@ -187,6 +244,46 @@ class gameMaster:
         else:
             self.playerClasses[playerId].send_message(json.dumps(
                 {"type": "message", "dat": "Karten-combos zurzeit nicht verfügbar!"}))
+
+    def komunist(self):
+        toMix = []
+        for key, value in self.playerDeck.items():
+            self.playerDeck[key] = []
+            toMix += value
+            sleep(1)
+            self.addEvent(key,
+                          {"type": "stats", "dat": {
+                              "type": "deck",
+                              "dat": []
+                          }})
+            self.easyEvents("playerCardCount")
+
+        for s in range(5):
+            sleep(2)
+            self.addEvents({"type": "message", "dat": f"mischen... {s+1}/5"})
+
+        cards = ceil(len(toMix)/len(self.players))
+
+        for x in range(cards):
+            for player in self.players:
+                if len(toMix) != 0:
+                    choice = random.randint(0, len(toMix)-1)
+                    self.playerDeck[player].append(toMix[choice])
+                    toMix.pop(choice)
+                else:
+                    choice = random.randint(0, len(self.availableCards)-1)
+                    self.playerDeck[player].append(self.availableCards[choice])
+                    self.availableCards.pop(choice)
+        
+        #update players of their deck
+        for player in self.players:
+            self.addEvent(player,
+                          {"type": "stats", "dat": {
+                              "type": "deck",
+                              "dat": self.playerDeck[player]
+                          }})
+        self.easyEvents("playerCardCount")
+        self.nextPlayer()
 
     def selectColor(self, playerId, color):
         if self.players[self.currentPlayer] == playerId:

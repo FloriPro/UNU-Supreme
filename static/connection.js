@@ -23,7 +23,7 @@ ws.onmessage = async function (event) {
         return;
     }
     else if (data["type"] == "stats") {
-        //load player names
+        //load/update player names
         if (data["dat"]["type"] == "players") {
             document.querySelector("#playerList").innerHTML = "";
             var i = 0;
@@ -64,15 +64,17 @@ ws.onmessage = async function (event) {
             return;
         }
 
+        //check if you have the right cards
         if (data["dat"]["type"] == "cardsStat") {
             var ok = cardCheckData(data["dat"]["dat"])
             if (ok == false) {
-                addMessage("Fehler: falsche karten angezeigt!")
+                //addMessage("Fehler: falsche karten angezeigt!")
                 ws.send(JSON.stringify({ "type": "resend_cards_deck" }))
             }
             return;
         }
 
+        //highlight current player (by index not id!)
         if (data["dat"]["type"] == "currentPlayer") {
             //remove old currentPlayer
             if (currentPlayer != -1) {
@@ -90,12 +92,13 @@ ws.onmessage = async function (event) {
             return;
         }
 
+        //sets your id
         if (data["dat"]["type"] == "yourId") {
             playerId = data["dat"]["dat"];
             return;
         }
 
-        //enemys
+        //how many cards the other players have
         if (data["dat"]["type"] == "playerCardCount") {
             var d = data["dat"]["dat"]
             for (var x of Object.keys(d)) {
@@ -129,7 +132,7 @@ ws.onmessage = async function (event) {
             return;
         }
 
-        //update cards
+        //update your available cards
         if (data["dat"]["type"] == "deck") {
             document.querySelector("#deck").innerHTML = "";
             for (var x of data["dat"]["dat"]) {
@@ -152,6 +155,8 @@ ws.onmessage = async function (event) {
             }
             return;
         }
+
+        //update the cards that were allready set
         if (data["dat"]["type"] == "lyingCards") {
             document.querySelector("#stapel").innerHTML = "";
             for (var card of data["dat"]["dat"]) {

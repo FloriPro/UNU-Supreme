@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Debug Console</title>
+    <script>
+        async function run() {
+            var command = document.querySelector("input").value;
+            var data = await fetch("consoleEval", {
+                method: "POST",
+                body: command
+            })
+            var str = await data.text()
+            document.querySelector("#out").innerText = str;
+        }
+    </script>
+</head>
+
+<body>
+    <p>Commands:"give &lt;card&gt; &lt;player-Id&gt;", "players"</p>
+    <b><p id="out">Output</p></b>
+    <input placeholder="command">
+    <button onclick="run()">Run</button>
+</body>
+
+</html>
