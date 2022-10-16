@@ -63,8 +63,11 @@
             onclick='ws.send(JSON.stringify({ "type": "get_name", "dat": document.querySelector("#nameInputInput").value }))'>
             Namen setzen</button>
     </div>
-    <p>Spieler:</p>
-    <div id="playerList"></div>
+
+    <div id="playerList">
+        <p>Spieler:</p>
+        <br>
+    </div>
 
     <div style="display:flex;justify-content: space-around;flex-wrap: nowrap;">
         <div id="drawCard" onclick='ws.send(JSON.stringify({"type":"drawCard"}))' style="height: 142px;">
@@ -75,7 +78,7 @@
 
     <div id="deck"></div>
 
-    <button onclick='ws.send(JSON.stringify({"type":"start_game"}))'>Spiel starten</button>
+    <button onclick='ws.send(JSON.stringify({"type":"start_game"}))' id="startGame">Spiel starten</button>
 </body>
 
 </html>

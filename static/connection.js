@@ -13,6 +13,7 @@ let currentPlayer = -1;
 const rot = 40;
 
 ws.onopen = function (event) {
+    ws.send(JSON.stringify({ "type": "typeStatus", "dat": "player" }))
     document.querySelector("#connected_status").style.display = "none";
 }
 ws.onmessage = async function (event) {
@@ -100,35 +101,38 @@ ws.onmessage = async function (event) {
 
         //how many cards the other players have
         if (data["dat"]["type"] == "playerCardCount") {
-            var d = data["dat"]["dat"]
-            for (var x of Object.keys(d)) {
-                var c = document.querySelector("#playerCards_" + x)
-                var currentCards = c.children.length
+            setTimeout(() => {
 
-                var toAdd = d[x] - currentCards
-                if (toAdd > 0) {
-                    //add
-                    for (var x = 0; x < toAdd; x++) {
-                        var img = document.createElement("img")
-                        img.className = "playerCard"
-                        img.src = "static/cards/back.png"
-                        //img.width = "86";
-                        //img.height = "129";
-                        //img.style.marginRight = "-45px";
-                        //img.style.height = "auto";
-                        //img.style.width = "30px";
+                var d = data["dat"]["dat"]
+                for (var x of Object.keys(d)) {
+                    var c = document.querySelector("#playerCards_" + x + ":not(.remove)")
+                    var currentCards = c.querySelectorAll(".playerCard:not(.remove)").length;
 
-                        img.style.filter = ``;
-                        img.style.animation = "moveIn 1s cubic-bezier(0, 0.78, 0.58, 1)";
-                        c.append(img);
-                    }
-                } else if (toAdd < 0) {
-                    //remove
-                    for (var x = 0; x < -toAdd; x++) {
-                        slowRemove(c.querySelector(".playerCard:not(.remove)"));
+                    var toAdd = d[x] - currentCards
+                    if (toAdd > 0) {
+                        //add
+                        for (var x = 0; x < toAdd; x++) {
+                            var img = document.createElement("img")
+                            img.className = "playerCard"
+                            img.src = "static/cards/back.png"
+                            //img.width = "86";
+                            //img.height = "129";
+                            //img.style.marginRight = "-45px";
+                            //img.style.height = "auto";
+                            //img.style.width = "30px";
+
+                            img.style.filter = ``;
+                            img.style.animation = "moveIn 1s cubic-bezier(0, 0.78, 0.58, 1)";
+                            c.append(img);
+                        }
+                    } else if (toAdd < 0) {
+                        //remove
+                        for (var x = 0; x < -toAdd; x++) {
+                            slowRemove(c.querySelector(".playerCard:not(.remove)"));
+                        }
                     }
                 }
-            }
+            }, 10)
             return;
         }
 
@@ -156,7 +160,7 @@ ws.onmessage = async function (event) {
             return;
         }
 
-        //update the cards that were allready set
+        //reset the cards that were allready set
         if (data["dat"]["type"] == "lyingCards") {
             document.querySelector("#stapel").innerHTML = "";
             for (var card of data["dat"]["dat"]) {
@@ -253,13 +257,24 @@ ws.onmessage = async function (event) {
             document.querySelector("#deck").append(p);
             return;
         }
+        else if (data["dat"] == "startGame") {
+            document.querySelector("#startGame").style.display = "none";
+            return
+        }
+        else if (data["dat"] == "hasTable") {
+            //hide all things displayed on table
+            var toHide = ["#playerList", "#stapel"];
+            for (var x of toHide) {
+                document.querySelector(x).style.display = "none";
+            }
+        }
     }
     else if (data["type"] == "status") {
         playerStatus = data["dat"];
         document.querySelector("#status").innerText = "Status: " + playerStatus;
 
         if (playerStatus != "slectCard") {
-            document.querySelector("#deck").style.filter = "blur(1px)";
+            document.querySelector("#deck").style.filter = "";//"blur(1px)";
         } else {
             document.querySelector("#deck").style.filter = "drop-shadow(0px 0px 37px yellow)";
         }
@@ -303,11 +318,11 @@ function delay(time) {
  * @param {HTMLElement} element 
  */
 async function slowRemove(element) {
+    element.className += " remove"
     //element.style.transition = "width 0.2s"
     element.style.width = "0px";
     element.style.marginRight = "0px";
     element.alt = "remove"
-    element.className += "remove"
     await delay(1000);
     element.remove();
 }

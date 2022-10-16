@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Tisch stuff</title>
+    <script src="{{ url_for('static', filename='main.js') }}"></script>
+    <script defer src="static/tableConnect.js"></script>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+
+<body>
+    <div id="alerts" style="right: 0;position: fixed;max-width: 200px;min-width: 50px;z-index: 999999;"></div>
+    <div id="playerList">
+    </div>
+    <div id="stapel" class="center"></div>
+</body>
+
+</html>

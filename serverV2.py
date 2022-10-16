@@ -3,6 +3,7 @@ import re
 from threading import Thread
 import asyncio
 from time import sleep, time
+from turtle import title
 from simple_websocket_server import WebSocketServer, WebSocket
 from re import S
 from tkinter import W
@@ -58,6 +59,11 @@ def console():
     return render_template("console.html", title='Debug console')
 
 
+@app.route("/table")
+def desk():
+    return render_template("table.html", title="Table Stuff")
+
+
 cards = {"red":    {2: ["2+", "aussetzen", "richtungswechsel", "1", "2", "3", "4", "5", "6", "7", "8", "9", "komunist"]},
          "green":  {2: ["2+", "aussetzen", "richtungswechsel", "1", "2", "3", "4", "5", "6", "7", "8", "9", "komunist"]},
          "yellow": {2: ["2+", "aussetzen", "richtungswechsel", "1", "2", "3", "4", "5", "6", "7", "8", "9", "komunist"]},
@@ -89,6 +95,8 @@ class gameMaster:
         self.currentPlayer = 0
         self.direction = 1
 
+        self.tables = []
+
         self.players = []
         self.playerNames = {}
         self.playerClasses = {}
@@ -98,6 +106,10 @@ class gameMaster:
         self.lyingCards = []
 
         self.cardCache = ""
+
+    def sendTable(self, dat):
+        for value in self.tables:
+            value.send_message(json.dumps(dat))
 
     def setCards(self):
         self.availableCards = deck
@@ -125,6 +137,11 @@ class gameMaster:
         self.lyingCards.append(self.availableCards[choice])
         self.availableCards.pop(choice)
 
+        self.addEvents({
+            "type": "action",
+            "dat": "startGame"
+        })
+
         self.easyEvents("cardRedo")
         self.askPlayer()
 
@@ -139,6 +156,10 @@ class gameMaster:
             "type": "currentPlayer",
             "dat": self.currentPlayer
         }})
+        self.sendTable({
+            "type": "currentPlayer",
+            "dat": self.currentPlayer
+        })
         if self.lyingCards[-1].endswith("4+"):
             self.drawCard(playerId)
             self.drawCard(playerId)
@@ -203,8 +224,8 @@ class gameMaster:
                         self.lyingCards.append(card[0])
                         self.easyEvents("cardAdd", card[0])
 
-                        self.playerClasses[playerId].send_message(json.dumps(
-                            {"type": "message", "dat": "Karte gelegt!"}))
+                        #self.playerClasses[playerId].send_message(json.dumps(
+                        #    {"type": "message", "dat": "Karte gelegt!"}))
                         self.addEvents(
                             {"type": "message", "dat": "Karten werden neu gemischt....."})
 
@@ -223,8 +244,8 @@ class gameMaster:
                         self.addEvent(
                             playerId, {"type": "action", "dat": "removeCard", "dat2": card[0]})
                         self.easyEvents("cardAdd", card[0])
-                        self.playerClasses[playerId].send_message(json.dumps(
-                            {"type": "message", "dat": "Karte gelegt!"}))
+                        #self.playerClasses[playerId].send_message(json.dumps(
+                        #    {"type": "message", "dat": "Karte gelegt!"}))
                         if (card[0].endswith("_aussetzen")):
                             self.nextPlayer(2)
                         else:
@@ -274,8 +295,8 @@ class gameMaster:
                     choice = random.randint(0, len(self.availableCards)-1)
                     self.playerDeck[player].append(self.availableCards[choice])
                     self.availableCards.pop(choice)
-        
-        #update players of their deck
+
+        # update players of their deck
         for player in self.players:
             self.addEvent(player,
                           {"type": "stats", "dat": {
@@ -292,8 +313,8 @@ class gameMaster:
             self.addEvent(
                 playerId, {"type": "action", "dat": "removeCard", "dat2": self.cardCache})
             self.easyEvents("cardAdd", color+self.cardCache)
-            self.playerClasses[playerId].send_message(json.dumps(
-                {"type": "message", "dat": "Karte gelegt!"}))
+            #self.playerClasses[playerId].send_message(json.dumps(
+            #    {"type": "message", "dat": "Karte gelegt!"}))
             self.nextPlayer()
         else:
             self.playerClasses[playerId].send_message(json.dumps(
@@ -314,6 +335,11 @@ class gameMaster:
         if etype == "playerlist":
             self.addEvents({"type": "stats", "dat": {"type": "players", "dat": {
                            "id": self.players, "name": self.playerNames}}})
+            self.sendTable({"type": "players",
+                            "dat": {
+                                "id": self.players,
+                                "name": self.playerNames
+                            }})
         if etype == "cardList":
             for playerId in self.players:
                 self.addEvent(playerId,
@@ -328,6 +354,10 @@ class gameMaster:
                 "type": "lyingCards",
                 "dat": self.lyingCards
             }})
+            self.sendTable({
+                "type": "lyingCards",
+                "dat": self.lyingCards
+            })
 
             counts = {}
             for x in self.playerDeck.keys():
@@ -336,11 +366,17 @@ class gameMaster:
                 "type": "playerCardCount",
                 "dat": counts
             }})
+
+            self.sendTableAll()
         if etype == "cardAdd":
             self.addEvents({"type": "action", "dat": {
                 "type": "lyingCards",
                 "dat": dat
             }})
+            self.sendTable({
+                "type": "lyingCardsAdd",
+                "dat": dat
+            })
 
             counts = {}
             for x in self.playerDeck.keys():
@@ -349,6 +385,7 @@ class gameMaster:
                 "type": "playerCardCount",
                 "dat": counts
             }})
+            self.sendTableAll()
         if etype == "playerCardCount":
             counts = {}
             for x in self.playerDeck.keys():
@@ -357,6 +394,19 @@ class gameMaster:
                 "type": "playerCardCount",
                 "dat": counts
             }})
+            self.sendTable({
+                "type": "playerCardCount",
+                "dat": counts
+            })
+
+    def sendTableAll(self):
+        counts = {}
+        for x in self.playerDeck.keys():
+            counts[x] = len(self.playerDeck[x])
+        self.sendTable({
+            "type": "playerCardCount",
+            "dat": counts
+        })
 
     def addEvents(self, dat):
         for x in self.players:
@@ -418,8 +468,8 @@ class Player(WebSocket):
                     master.playerNames[self.playerId] = self.playerName
                     self.currentAction = ""
                     master.easyEvents("playerlist")
-                    self.send_message(json.dumps(
-                        {"type": "message", "dat": "ok :)"}))
+                    #self.send_message(json.dumps(
+                    #    {"type": "message", "dat": "ok :)"}))
                     self.send_message(json.dumps(
                         {"type": "status", "dat": "waiting_for_beginning"}))
                 else:
@@ -447,6 +497,51 @@ class Player(WebSocket):
                                 }})
             elif data["type"] == "withdraw2x":
                 master.withdraw2x(self.playerId)
+            elif data["type"] == "typeStatus":
+                if data["dat"] == "player":
+                    if len(master.tables) != 0:
+                        self.send_message(json.dumps({
+                            "type": "action",
+                            "dat": "hasTable"
+                        }))
+
+                    self.currentAction = ""
+                    self.playerId = random.randint(0, 9999999999999)
+                    self.send_message(json.dumps(
+                        {"type": "stats", "dat": {"type": "yourId", "dat": self.playerId}}))
+
+                    if master.status == "waiting_for_players":
+                        master.players.append(self.playerId)
+                        master.playerClasses[self.playerId] = self
+
+                        self.send_message(json.dumps(
+                            {"type": "message", "dat": "Mit UNO-Supreme Verbunden!"}))
+                        self.send_message(json.dumps(
+                            {"type": "message", "dat": "Spieler anzahl zurzeit: "+str(len(master.players))}))
+
+                        # select name
+                        self.playerName = "["+str(self.playerId)+"]"
+                        self.send_message(json.dumps(
+                            {"type": "status", "dat": "waiting_for_name"}))
+                        self.send_message(json.dumps(
+                            {"type": "action", "dat": "get_name"}))
+                        self.currentAction = "get_name"
+                        master.easyEvents("playerlist")
+                    else:
+                        self.send_message(json.dumps(
+                            {"type": "message", "dat": "Nicht mit UNO-Supreme Verbunden!"}))
+                        self.send_message(json.dumps(
+                            {"type": "message", "dat": "Zurzeit ist schon ein spiel am laufen."}))
+                        self.send_message(json.dumps(
+                            {"type": "status", "dat": "watcher"}))
+                elif data["dat"] == "table":
+                    master.tables.append(self)
+                    self.send_message(json.dumps(
+                        {"type": "message", "dat": "Als Tisch verbunden"}))
+                    master.addEvents({
+                        "type": "action",
+                        "dat": "hasTable"
+                    })
             else:
                 self.send_message(json.dumps(
                     {"type": "message", "dat": "action "+data["type"]+" could not be used! (wanted action: "+self.currentAction+")"}))
@@ -454,37 +549,7 @@ class Player(WebSocket):
             traceback.print_exc()
 
     def connected(self):
-        global master
         self.currentAction = ""
-
-        self.playerId = random.randint(0, 9999999999999)
-        self.send_message(json.dumps(
-            {"type": "stats", "dat": {"type": "yourId", "dat": self.playerId}}))
-
-        if master.status == "waiting_for_players" or True:
-            master.players.append(self.playerId)
-            master.playerClasses[self.playerId] = self
-
-            self.send_message(json.dumps(
-                {"type": "message", "dat": "Mit UNO-Supreme Verbunden!"}))
-            self.send_message(json.dumps(
-                {"type": "message", "dat": "Spieler anzahl zurzeit: "+str(len(master.players))}))
-
-            # select name
-            self.playerName = "["+str(self.playerId)+"]"
-            self.send_message(json.dumps(
-                {"type": "status", "dat": "waiting_for_name"}))
-            self.send_message(json.dumps(
-                {"type": "action", "dat": "get_name"}))
-            self.currentAction = "get_name"
-            master.easyEvents("playerlist")
-        else:
-            self.send_message(json.dumps(
-                {"type": "message", "dat": "Nicht mit UNO-Supreme Verbunden!"}))
-            self.send_message(json.dumps(
-                {"type": "message", "dat": "Zurzeit ist schon ein spiel am laufen."}))
-            self.send_message(json.dumps(
-                {"type": "status", "dat": "watcher"}))
         print(self.address, 'connected')
 
     def handle_close(self):

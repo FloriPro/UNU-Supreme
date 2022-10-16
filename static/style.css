@@ -62,8 +62,10 @@ body {
     margin-right: -45px;
 }
 
-.ownDeck:hover {
-    filter: drop-shadow(2px 4px 6px black);
+@media screen and (min-width: 640px) {
+    .ownDeck:hover {
+        filter: drop-shadow(2px 4px 6px black);
+    }
 }
 
 /* The alert message box */
