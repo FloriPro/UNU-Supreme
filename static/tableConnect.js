@@ -1,4 +1,4 @@
-let ws = new WebSocket(`ws://${location.host}:8000/`);
+let ws = new WebSocket(`ws://${serverHost}:8000/`);
 const maxCardRotation = 10;
 
 ws.onclose = function (event) {

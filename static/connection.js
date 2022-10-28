@@ -1,4 +1,4 @@
-let ws = new WebSocket(`ws://${location.host}:8000/`);
+let ws = new WebSocket(`ws://${serverHost}:8000/`);
 ws.onclose = function (event) {
     console.error(event);
     document.querySelector("#connected_status").style.display = "";
@@ -267,6 +267,10 @@ ws.onmessage = async function (event) {
             for (var x of toHide) {
                 document.querySelector(x).style.display = "none";
             }
+        }
+        else if (data["dat"] == "slectCard") {
+            //handled by status
+            return;
         }
     }
     else if (data["type"] == "status") {

@@ -2,25 +2,67 @@
 <html>
 
 <head>
+    <script>const serverHost = `{{serverHost}}`;</script>
     <title>Debug Console</title>
-    <script>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src="{{ url_for('static', filename='main.js') }}"></script>
+    <script defer>
+        let ws = new WebSocket(`ws://${serverHost}:8000/`);
+        ws.onclose = function (event) {
+            console.error(event);
+            log("Fehler: Die verbindung wurde geschlossen!");
+        }
+        ws.onopen = function (event) {
+            ws.send(JSON.stringify({ "type": "typeStatus", "dat": "console" }))
+        }
+        ws.onmessage = function (event) {
+            var t = event.data;
+            if (event.data == "") {
+                log_i("null");
+            } else {
+                log(event.data);
+            }
+        }
         async function run() {
             var command = document.querySelector("input").value;
-            var data = await fetch("consoleEval", {
-                method: "POST",
-                body: command
-            })
-            var str = await data.text()
-            document.querySelector("#out").innerText = str;
+            if (command == "cls") {
+                document.querySelector("#consoleList").innerHTML = "";
+                return
+            }
+            ws.send(JSON.stringify({ "type": "eval", "dat": command }))
+        }
+        function log(dat) {
+            var p = document.createElement("p");
+            p.innerText = dat;
+            document.querySelector("#consoleList").prepend(p)
+        }
+        function log_i(dat) {
+            var p = document.createElement("p");
+            p.innerText = dat;
+            p.innerHTML = "<i>" + p.innerHTML + "</i>"
+            document.querySelector("#consoleList").prepend(p)
         }
     </script>
+    <style>
+        #consoleList {
+            background-color: black;
+            color: rgb(221, 221, 221);
+        }
+    </style>
 </head>
 
 <body>
-    <p>Commands:"give &lt;card&gt; &lt;player-Id&gt;", "players"</p>
-    <b><p id="out">Output</p></b>
-    <input placeholder="command">
+    <p>Commands:</p>
+    <ul>
+        <li>give &lt;card&gt; &lt;player-Id&gt;</li>
+        <li>players</li>
+        <li>get &lt;player-Id&gt;</li>
+    </ul>
+    <input placeholder="command" style="width: calc(100% - 100px);">
     <button onclick="run()">Run</button>
+    <div id="consoleList">
+        <p id="out">connecting...</p>
+    </div>
 </body>
 
 </html>
