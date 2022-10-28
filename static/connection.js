@@ -1,169 +1,236 @@
-let ws = new WebSocket(`ws://${serverHost}:8000/`);
-ws.onclose = function (event) {
-    console.error(event);
-    document.querySelector("#connected_status").style.display = "";
-    addMessage("Fehler: Die verbindung wurde geschlossen!");
-}
-let playerStatus = "waiting_for_connection"
-document.querySelector("#status").innerText = "Status: " + playerStatus;
-
-let playerId = -1;
-let currentPlayer = -1;
-
 const rot = 40;
+const colors = ["red", "green", "blue", "yellow"];
+const workingCombis = ["aussetzen", "richtungswechsel", "komunist"];
+let wantsType = "player";
 
-ws.onopen = function (event) {
-    ws.send(JSON.stringify({ "type": "typeStatus", "dat": "player" }))
-    document.querySelector("#connected_status").style.display = "none";
-}
-ws.onmessage = async function (event) {
-    var data = JSON.parse(event.data);
-    //console.log(data);
-    if (data["type"] == "message") {
-        addMessage(data["dat"]);
-        return;
+
+let ws;
+let playerStatus;
+let playerId;
+let currentPlayer;
+let hasTable = false;
+function connect() {
+    ws = new WebSocket(`ws://${serverHost}:8000/`);
+    ws.onclose = function (event) {
+        if (playerStatus == "reconnect") { return; }
+        console.error(event);
+        document.querySelector("#connected_status").style.display = "";
+        addMessage("Fehler: Die verbindung wurde geschlossen!");
     }
-    else if (data["type"] == "stats") {
-        //load/update player names
-        if (data["dat"]["type"] == "players") {
-            document.querySelector("#playerList").innerHTML = "";
-            var i = 0;
-            for (var x of data["dat"]["dat"]["id"]) {
-                var name = "error";
-                if (data["dat"]["dat"]["name"][x] != undefined) {
-                    //id to name
-                    name = data["dat"]["dat"]["name"][x]
-                } else {
-                    //no name defined
-                    name = "[" + x + "]"
+    playerStatus = "waiting_for_connection"
+    document.querySelector("#status").innerText = "Status: " + playerStatus;
+
+    playerId = -1;
+    currentPlayer = -1;
+
+    ws.onopen = function (event) {
+        ws.send(JSON.stringify({ "type": "typeStatus", "dat": wantsType }))
+        document.querySelector("#connected_status").style.display = "none";
+    }
+    ws.onmessage = async function (event) {
+        var data = JSON.parse(event.data);
+        //console.log(data);
+        if (data["type"] == "message") {
+            addMessage(data["dat"]);
+            return;
+        }
+        else if (data["type"] == "stats") {
+            //load/update player names
+            if (data["dat"]["type"] == "players") {
+                document.querySelector("#playerList").innerHTML = "";
+                var i = 0;
+                for (var x of data["dat"]["dat"]["id"]) {
+                    var name = "error";
+                    if (data["dat"]["dat"]["name"][x] != undefined) {
+                        //id to name
+                        name = data["dat"]["dat"]["name"][x]
+                    } else {
+                        //no name defined
+                        name = "[" + x + "]"
+                    }
+
+                    if (x == playerId) {
+                        name = "Du: " + name
+                    }
+
+                    var div = document.createElement("div");
+                    div.className = "player"
+                    div.id = "player_" + i;
+                    div.style.border = "5px solid #1C6EA4"
+
+                    var div2 = document.createElement("div");
+                    div2.className = "playerCards"
+                    div2.id = "playerCards_" + x;
+
+                    var p = document.createElement("p");
+                    p.innerText = name;
+                    p.style.marginBottom = "0px";
+                    p.style.marginTop = "0px";
+
+                    div.append(p);
+                    div.append(div2);
+
+                    document.querySelector("#playerList").append(div);
+                    i++;
                 }
+                return;
+            }
 
-                if (x == playerId) {
-                    name = "Du: " + name
+            //check if you have the right cards
+            if (data["dat"]["type"] == "cardsStat") {
+                var ok = cardCheckData(data["dat"]["dat"])
+                if (ok == false) {
+                    //addMessage("Fehler: falsche karten angezeigt!")
+                    ws.send(JSON.stringify({ "type": "resend_cards_deck" }))
                 }
-
-                var div = document.createElement("div");
-                div.className = "player"
-                div.id = "player_" + i;
-                div.style.border = "5px solid #1C6EA4"
-
-                var div2 = document.createElement("div");
-                div2.className = "playerCards"
-                div2.id = "playerCards_" + x;
-
-                var p = document.createElement("p");
-                p.innerText = name;
-                p.style.marginBottom = "0px";
-                p.style.marginTop = "0px";
-
-                div.append(p);
-                div.append(div2);
-
-                document.querySelector("#playerList").append(div);
-                i++;
+                return;
             }
-            return;
-        }
 
-        //check if you have the right cards
-        if (data["dat"]["type"] == "cardsStat") {
-            var ok = cardCheckData(data["dat"]["dat"])
-            if (ok == false) {
-                //addMessage("Fehler: falsche karten angezeigt!")
-                ws.send(JSON.stringify({ "type": "resend_cards_deck" }))
-            }
-            return;
-        }
-
-        //highlight current player (by index not id!)
-        if (data["dat"]["type"] == "currentPlayer") {
-            //remove old currentPlayer
-            if (currentPlayer != -1) {
-                var c = document.querySelector("#player_" + currentPlayer);
-                if (c != undefined) {
-                    c.style.filter = ``;
-                }
-            }
-            currentPlayer = data["dat"]["dat"];
-
-            var c = document.querySelector("#player_" + currentPlayer);
-            if (c != undefined) {
-                c.style.filter = `drop-shadow(yellow 0px 0px 37px)`;
-            }
-            return;
-        }
-
-        //sets your id
-        if (data["dat"]["type"] == "yourId") {
-            playerId = data["dat"]["dat"];
-            return;
-        }
-
-        //how many cards the other players have
-        if (data["dat"]["type"] == "playerCardCount") {
-            setTimeout(() => {
-
-                var d = data["dat"]["dat"]
-                for (var x of Object.keys(d)) {
-                    var c = document.querySelector("#playerCards_" + x + ":not(.remove)")
-                    var currentCards = c.querySelectorAll(".playerCard:not(.remove)").length;
-
-                    var toAdd = d[x] - currentCards
-                    if (toAdd > 0) {
-                        //add
-                        for (var x = 0; x < toAdd; x++) {
-                            var img = document.createElement("img")
-                            img.className = "playerCard"
-                            img.src = "static/cards/back.png"
-                            //img.width = "86";
-                            //img.height = "129";
-                            //img.style.marginRight = "-45px";
-                            //img.style.height = "auto";
-                            //img.style.width = "30px";
-
-                            img.style.filter = ``;
-                            img.style.animation = "moveIn 1s cubic-bezier(0, 0.78, 0.58, 1)";
-                            c.append(img);
-                        }
-                    } else if (toAdd < 0) {
-                        //remove
-                        for (var x = 0; x < -toAdd; x++) {
-                            slowRemove(c.querySelector(".playerCard:not(.remove)"));
-                        }
+            //highlight current player (by index not id!)
+            if (data["dat"]["type"] == "currentPlayer") {
+                //remove old currentPlayer
+                if (currentPlayer != -1) {
+                    var c = document.querySelector("#player_" + currentPlayer);
+                    if (c != undefined) {
+                        c.style.filter = ``;
                     }
                 }
-            }, 10)
-            return;
-        }
+                currentPlayer = data["dat"]["dat"];
 
-        //update your available cards
-        if (data["dat"]["type"] == "deck") {
-            document.querySelector("#deck").innerHTML = "";
-            for (var x of data["dat"]["dat"]) {
-                var p = getCard(x);
-
-                //var img = document.createElement("img")
-                //img.src = "/static/cards/" + x + ".png"
-                //img.onerror = (event) => {
-                //    event.srcElement.style.background = "aqua";
-                //}
-                p.onclick = (event) => {
-                    layCard(event.target.alt);
+                var c = document.querySelector("#player_" + currentPlayer);
+                if (c != undefined) {
+                    c.style.filter = `drop-shadow(yellow 0px 0px 37px)`;
                 }
-                p.className = "ownDeck"
-                //img.alt = x
-                //img.width = "86";
-                //img.height = "129";
-
-                document.querySelector("#deck").append(p)
+                return;
             }
-            return;
-        }
 
-        //reset the cards that were allready set
-        if (data["dat"]["type"] == "lyingCards") {
-            document.querySelector("#stapel").innerHTML = "";
-            for (var card of data["dat"]["dat"]) {
+            //sets your id
+            if (data["dat"]["type"] == "yourId") {
+                playerId = data["dat"]["dat"];
+                return;
+            }
+
+            //how many cards the other players have
+            if (data["dat"]["type"] == "playerCardCount") {
+                setTimeout(() => {
+
+                    var d = data["dat"]["dat"]
+                    for (var x of Object.keys(d)) {
+                        var c = document.querySelector("#playerCards_" + x + ":not(.remove)")
+                        if (c != null) {
+                            var currentCards = c.querySelectorAll(".playerCard:not(.remove)").length;
+
+                            var toAdd = d[x] - currentCards
+                            if (toAdd > 0) {
+                                //add
+                                for (var x = 0; x < toAdd; x++) {
+                                    var img = document.createElement("img")
+                                    img.className = "playerCard"
+                                    img.src = "static/cards/back.png"
+                                    //img.width = "86";
+                                    //img.height = "129";
+                                    //img.style.marginRight = "-45px";
+                                    //img.style.height = "auto";
+                                    //img.style.width = "30px";
+
+                                    img.style.filter = ``;
+                                    img.style.animation = "moveIn 1s cubic-bezier(0, 0.78, 0.58, 1)";
+                                    c.append(img);
+                                }
+                            } else if (toAdd < 0) {
+                                //remove
+                                for (var x = 0; x < -toAdd; x++) {
+                                    slowRemove(c.querySelector(".playerCard:not(.remove)"));
+                                }
+                            }
+                        } else {
+                            //only if player is removed by winning. No panic
+                        }
+                    }
+                }, 10)
+                return;
+            }
+
+            //update your available cards
+            if (data["dat"]["type"] == "deck") {
+                document.querySelector("#deck").innerHTML = "";
+                for (var x of data["dat"]["dat"]) {
+                    var p = getCard(x);
+
+                    //var img = document.createElement("img")
+                    //img.src = "/static/cards/" + x + ".png"
+                    //img.onerror = (event) => {
+                    //    event.srcElement.style.background = "aqua";
+                    //}
+                    p.onclick = (event) => {
+                        layCard(event.target.alt);
+                    }
+                    p.className = "ownDeck"
+                    //img.alt = x
+                    //img.width = "86";
+                    //img.height = "129";
+
+                    document.querySelector("#deck").append(p)
+                }
+                updateCombinations();
+                return;
+            }
+
+            //reset the cards that were allready set
+            if (data["dat"]["type"] == "lyingCards") {
+                document.querySelector("#stapel").innerHTML = "";
+                for (var card of data["dat"]["dat"]) {
+                    var p = getCard(card);
+                    //var img = document.createElement("img")
+                    //img.src = "/static/cards/" + card + ".png";
+                    p.className = "stapelCard";
+                    p.style.position = "absolute";
+                    //img.onerror = (event) => {
+                    //    event.srcElement.style.background = "aqua";
+                    //}
+                    //img.alt = card;
+                    //img.width = "86";
+                    //img.height = "129";
+
+                    var a = Math.random() * rot * 2 - rot;
+                    p.style.transform = "rotate(" + a + "deg)"
+
+                    document.querySelector("#stapel").append(p)
+                }
+                return;
+            }
+        }
+        else if (data["type"] == "action") {
+            if (data["dat"] == "get_name") {
+                document.querySelector("#nameInput").style.display = "";
+                return;
+            }
+            if (data["dat"] == "select_color") {
+                document.querySelector("#colorInput").style.display = "flex";
+                return;
+            }
+            if (data["dat"] == "slect2+Card") {
+                document.querySelector("#withdrawTwo").innerText = data["dat2"] + " Ziehen"
+                document.querySelector("#twoxInput").style.display = "flex";
+
+                //load stuff
+                var cards = document.querySelectorAll(".ownDeck");
+
+                for (var c of cards) {
+                    if (c.alt != "remove" && c.alt.endsWith("2+")) {
+                        var p = getCard(c.alt)
+                        p.onclick = (event) => {
+                            layCard(event.target.alt);
+                        }
+                        document.querySelector("#twoxinputPositions").append(p);
+                    }
+                }
+                return;
+
+            }
+            else if (data["dat"]["type"] == "lyingCards") {
+                var card = data["dat"]["dat"];
+
                 var p = getCard(card);
                 //var img = document.createElement("img")
                 //img.src = "/static/cards/" + card + ".png";
@@ -180,126 +247,174 @@ ws.onmessage = async function (event) {
                 p.style.transform = "rotate(" + a + "deg)"
 
                 document.querySelector("#stapel").append(p)
+                return;
             }
-            return;
-        }
-    }
-    else if (data["type"] == "action") {
-        if (data["dat"] == "get_name") {
-            document.querySelector("#nameInput").style.display = "";
-            return;
-        }
-        if (data["dat"] == "select_color") {
-            document.querySelector("#colorInput").style.display = "flex";
-            return;
-        }
-        if (data["dat"] == "slect2+Card") {
-            document.querySelector("#withdrawTwo").innerText = data["dat2"] + " Ziehen"
-            document.querySelector("#twoxInput").style.display = "flex";
+            else if (data["dat"] == "removeCard") {
+                slowRemove(document.querySelector('.ownDeck[alt="' + data["dat2"] + '"]:not(.remove)'));
+                updateCombinations();
+                return;
+            }
+            else if (data["dat"]["type"] == "addCard") {
+                var x = data["dat"]["dat"]
 
-            //load stuff
-            var cards = document.querySelectorAll(".ownDeck");
+                var p = getCard(x);
+                //var img = document.createElement("img")
+                //img.src = "/static/cards/" + x + ".png"
+                //img.onerror = (event) => {
+                //    event.srcElement.style.background = "aqua";
+                //}
+                p.onclick = (event) => {
+                    layCard(event.target.alt);
+                }
+                p.className = "ownDeck"
+                //img.alt = x
+                //img.width = "86";
+                //img.height = "129";
 
-            for (var c of cards) {
-                if (c.alt != "remove" && c.alt.endsWith("2+")) {
-                    var p = getCard(c.alt)
-                    p.onclick = (event) => {
-                        layCard(event.target.alt);
-                    }
-                    document.querySelector("#twoxinputPositions").append(p);
+                document.querySelector("#deck").append(p);
+                updateCombinations();
+                return;
+            }
+            else if (data["dat"] == "startGame") {
+                document.querySelector("#drawCard").style.display = "";
+                document.querySelector("#startGame").style.display = "none";
+                return
+            }
+            else if (data["dat"] == "hasTable") {
+                //hide all things displayed on table
+                hasTable = true;
+                var toHide = ["#playerList", "#stapel"];
+                for (var x of toHide) {
+                    document.querySelector(x).style.display = "none";
                 }
             }
-            return;
-
-        }
-        else if (data["dat"]["type"] == "lyingCards") {
-            var card = data["dat"]["dat"];
-
-            var p = getCard(card);
-            //var img = document.createElement("img")
-            //img.src = "/static/cards/" + card + ".png";
-            p.className = "stapelCard";
-            p.style.position = "absolute";
-            //img.onerror = (event) => {
-            //    event.srcElement.style.background = "aqua";
-            //}
-            //img.alt = card;
-            //img.width = "86";
-            //img.height = "129";
-
-            var a = Math.random() * rot * 2 - rot;
-            p.style.transform = "rotate(" + a + "deg)"
-
-            document.querySelector("#stapel").append(p)
-            return;
-        }
-        else if (data["dat"] == "removeCard") {
-            slowRemove(document.querySelector('.ownDeck[alt="' + data["dat2"] + '"]:not(.remove)'));
-            return;
-        }
-        else if (data["dat"]["type"] == "addCard") {
-            var x = data["dat"]["dat"]
-
-            var p = getCard(x);
-            //var img = document.createElement("img")
-            //img.src = "/static/cards/" + x + ".png"
-            //img.onerror = (event) => {
-            //    event.srcElement.style.background = "aqua";
-            //}
-            p.onclick = (event) => {
-                layCard(event.target.alt);
+            else if (data["dat"] == "slectCard") {
+                //handled by status
+                return;
             }
-            p.className = "ownDeck"
-            //img.alt = x
-            //img.width = "86";
-            //img.height = "129";
-
-            document.querySelector("#deck").append(p);
-            return;
-        }
-        else if (data["dat"] == "startGame") {
-            document.querySelector("#startGame").style.display = "none";
-            return
-        }
-        else if (data["dat"] == "hasTable") {
-            //hide all things displayed on table
-            var toHide = ["#playerList", "#stapel"];
-            for (var x of toHide) {
-                document.querySelector(x).style.display = "none";
+            else if (data["dat"] == "removeLastLyingCard") {
+                document.querySelector("#stapel").firstChild.remove()
+                return;
+            }
+            else if (data["dat"] == "reconnect") {
+                reconnect();
+                return;
             }
         }
-        else if (data["dat"] == "slectCard") {
-            //handled by status
+        else if (data["type"] == "status") {
+            playerStatus = data["dat"];
+            document.querySelector("#status").innerText = "Status: " + playerStatus;
+
+            if (playerStatus != "slectCard") {
+                document.querySelector("#deck").style.filter = "";//"blur(1px)";
+            } else {
+                document.querySelector("#deck").style.filter = "drop-shadow(0px 0px 37px yellow)";
+            }
+            if (playerStatus == "waiting_for_beginning") {
+                document.querySelector("#startGame").style.display = "";
+            }
+            if (playerStatus == "watcher") {
+                if (hasTable) {
+                    document.querySelector("#lookOnTable").style.display = "";
+                } else {
+                    document.querySelector("#lookOnTable").style.display = "none";
+                }
+            } else {
+                document.querySelector("#lookOnTable").style.display = "none";
+            }
+
+
+            if (playerStatus != "waiting_for_name") {
+                document.querySelector("#nameInput").style.display = "none";
+            }
+            if (playerStatus != "waiting_for_color") {
+                document.querySelector("#colorInput").style.display = "none";
+            }
+            if (playerStatus != "2+_Desicion") {
+                document.querySelector("#twoxInput").style.display = "none";
+            } else {
+                document.querySelector("#twoxinputPositions").innerHTML = "";
+            }
+
             return;
         }
+
+        console.log(data);
     }
-    else if (data["type"] == "status") {
-        playerStatus = data["dat"];
-        document.querySelector("#status").innerText = "Status: " + playerStatus;
-
-        if (playerStatus != "slectCard") {
-            document.querySelector("#deck").style.filter = "";//"blur(1px)";
-        } else {
-            document.querySelector("#deck").style.filter = "drop-shadow(0px 0px 37px yellow)";
-        }
-
-        if (playerStatus != "waiting_for_name") {
-            document.querySelector("#nameInput").style.display = "none";
-        }
-        if (playerStatus != "waiting_for_color") {
-            document.querySelector("#colorInput").style.display = "none";
-        }
-        if (playerStatus != "2+_Desicion") {
-            document.querySelector("#twoxInput").style.display = "none";
-        } else {
-            document.querySelector("#twoxinputPositions").innerHTML = "";
-        }
-
-        return;
-    }
-
-    console.log(data);
 }
+
+function genCombiTeller(cards) {
+    var div = document.createElement("div");
+    div.className = "combiShowerBody"
+
+    for (var x of cards) {
+        var img = getCard(x);
+        img.className = "combiShower";
+        img.style.animation = "";
+
+        div.append(img);
+    }
+
+    return div;
+}
+
+function updateCombinations() {
+    ///////////////////////////////
+    //          WINDOWS          //
+    //gleiche karte, alle Farben //
+    ///////////////////////////////
+
+    //gen combis
+    var all = [];
+    var tested = []
+    var combinations = [];
+    for (var x of document.querySelectorAll(".ownDeck:not(.remove)")) {
+        all.push(x.alt.split("_")); // ["green", "komunist"]
+    }
+    for (var x of all) {
+        if (!tested.includes(x[1])) {
+            var availableColors = [];
+            for (var i of all) {
+                if (i[1] == x[1]) {
+                    if (!availableColors.includes(i[0])) {
+                        availableColors.push(i[0]);
+                    }
+                }
+            }
+
+            if (availableColors.length == 4) {
+                //can work
+                combinations.push(x[1]);
+            }
+
+            tested.push(x[1]);
+        }
+    }
+    console.log(combinations);
+
+    document.querySelector("#combinations").innerHTML = "";
+    for (var x of combinations) {
+        if (workingCombis.includes(x)) {
+            document.querySelector("#combinations").append(genCombiTeller(["red_" + x, "green_" + x, "blue_" + x, "yellow_" + x]));
+        } else {
+            document.querySelector("#combinations").append(genCombiTeller(["red_" + x, "green_" + x, "blue_" + x, "yellow_" + x]));
+        }
+    }
+
+
+    //////////// Other ////////////
+    //9 + 6
+
+}
+
+function reconnect() {
+    document.querySelector("#playerList").innerHTML = "";
+    document.querySelector("#drawCard").style.display = "none";
+    ws.close();
+    playerStatus = "reconnect";
+    connect();
+}
+connect();
 
 function getCard(card) {
     var img = document.createElement("img")
@@ -347,11 +462,11 @@ function layCard(card) {
 }
 
 function cardCheck() {
-    if (!["waiting_for_connection", "waiting_for_name", "waiting_for_beginning", "watcher"].includes(playerStatus))
+    if (!["waiting_for_connection", "waiting_for_name", "waiting_for_beginning", "watcher", "reconnect"].includes(playerStatus))
         ws.send(JSON.stringify({ "type": "getCardsStat" }))
 }
 function cardCheckData(data) {
-    var cards = document.querySelectorAll(".ownDeck");
+    var cards = document.querySelectorAll(".ownDeck:not(.remove)");
     var allCards = []
     for (var c of cards) {
         if (c.alt != "remove") {

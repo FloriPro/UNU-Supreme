@@ -6,7 +6,8 @@
 
 html,
 body {
-    overflow-x: hidden
+    overflow-x: hidden;
+    margin: 0px;
 }
 
 .player {
@@ -56,6 +57,26 @@ body {
 .center {
     display: flex;
     justify-content: space-around;
+}
+
+.combiShower {
+    margin-right: -63px;
+}
+
+.combiShowerBody {
+    background-color: #bebebe;
+    width: fit-content;
+    padding-right: calc(63px + 5px);
+    padding-left: 5px;
+    /*padding-bottom: 10px;*/
+    padding-top: 5px;
+    border-radius: 13px;
+}
+
+@media screen and (min-width: 640px) {
+    .combiShowerBody:hover {
+        filter: drop-shadow(2px 4px 6px black);
+    }
 }
 
 .ownDeck {

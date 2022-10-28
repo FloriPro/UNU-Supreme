@@ -57,29 +57,39 @@
     </div>
     <p id="connected_status" style="background-color: red;">Nicht verbunden!</p>
     <div id="alerts" style="right: 0;position: fixed;max-width: 200px;min-width: 50px;z-index: 999999;"></div>
-    <p id="status">Status: </p>
+    <p id="status" style="display: none;">Status: </p>
     <div id="nameInput" style="display: none;">
         <input type="text" id="nameInputInput">
         <button
             onclick='ws.send(JSON.stringify({ "type": "get_name", "dat": document.querySelector("#nameInputInput").value }))'>
             Namen setzen</button>
+        <button onclick="wantsType='watcher';reconnect();">Nur zuschauen</button>
     </div>
 
     <div id="playerList">
-        <p>Spieler:</p>
-        <br>
+        <p>Spielerliste Lädt...<br>Bist du verbunden?</p>
     </div>
 
     <div style="display:flex;justify-content: space-around;flex-wrap: nowrap;">
-        <div id="drawCard" onclick='ws.send(JSON.stringify({"type":"drawCard"}))' style="height: 142px;">
-            <!--<img src="static/cards/back.png" style="width: 86px; position:absolute;">-->
+        <div style="display: none; height: 142px;" id="drawCard" onclick='ws.send(JSON.stringify({"type":"drawCard"}))'>
         </div>
         <div id="stapel" class="center"></div>
     </div>
 
     <div id="deck"></div>
 
-    <button onclick='ws.send(JSON.stringify({"type":"start_game"}))' id="startGame">Spiel starten</button>
+
+    <br>
+    <br>
+    <br>
+
+    <div id="combinations" style="display: flex;">
+    </div>
+
+    <h1 id="lookOnTable" style="display: none;">Hier kannst du zurzeit nichts machen</h1>
+
+    <button onclick='ws.send(JSON.stringify({"type":"start_game"}))' id="startGame" style="display: none;">Spiel
+        starten</button>
 </body>
 
 </html>

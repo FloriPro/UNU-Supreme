@@ -7,29 +7,46 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <script src="{{ url_for('static', filename='main.js') }}"></script>
     <script defer>
-        let ws = new WebSocket(`ws://${serverHost}:8000/`);
-        ws.onclose = function (event) {
-            console.error(event);
-            log("Fehler: Die verbindung wurde geschlossen!");
-        }
-        ws.onopen = function (event) {
-            ws.send(JSON.stringify({ "type": "typeStatus", "dat": "console" }))
-        }
-        ws.onmessage = function (event) {
-            var t = event.data;
-            if (event.data == "") {
-                log_i("null");
-            } else {
-                log(event.data);
+        /**
+         * @type {WebSocket}
+         */
+        let ws;
+        function connect() {
+            ws = new WebSocket(`ws://${serverHost}:8000/`);
+            ws.onclose = function (event) {
+                console.error(event);
+                log_i("Fehler: Die verbindung wurde geschlossen!");
+
+                //reload button
+                var button = document.createElement("button");
+                button.innerText = "reconnect";
+                button.onclick = reconnect;
+                document.querySelector("#consoleList").prepend(button)
+            }
+            ws.onopen = function (event) {
+                ws.send(JSON.stringify({ "type": "typeStatus", "dat": "console" }))
+            }
+            ws.onmessage = function (event) {
+                var t = event.data;
+                if (event.data == "") {
+                    log_i("null");
+                } else {
+                    log(event.data);
+                }
             }
         }
-        async function run() {
-            var command = document.querySelector("input").value;
+        function exec(command) {
             if (command == "cls") {
                 document.querySelector("#consoleList").innerHTML = "";
                 return
             }
             ws.send(JSON.stringify({ "type": "eval", "dat": command }))
+        }
+        function run() {
+            var command = document.querySelector("input").value;
+            for (var x of command.split(";")) {
+                exec(x);
+            }
         }
         function log(dat) {
             var p = document.createElement("p");
@@ -42,6 +59,12 @@
             p.innerHTML = "<i>" + p.innerHTML + "</i>"
             document.querySelector("#consoleList").prepend(p)
         }
+        function reconnect() {
+            ws.close();
+            connect();
+        }
+
+        connect();
     </script>
     <style>
         #consoleList {

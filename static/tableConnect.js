@@ -116,6 +116,7 @@ ws.onmessage = async function (event) {
 
             document.querySelector("#stapel").append(p)
         }
+        return;
     }
     if (data["type"] == "lyingCardsAdd") {
         var card = data["dat"];
@@ -136,6 +137,10 @@ ws.onmessage = async function (event) {
         p.style.transform = "rotate(" + a + "deg)"
 
         document.querySelector("#stapel").append(p)
+        return;
+    }
+    else if (data["type"] == "removeLastLyingCard") {
+        document.querySelector("#stapel").firstChild.remove()
         return;
     }
 
