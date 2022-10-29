@@ -1,0 +1,4 @@
+//windows XP combinations
+give yellow_komunist {0};give green_komunist {0};give red_komunist {0};give blue_komunist {0}
+give yellow_aussetzen {0};give green_aussetzen {0};give red_aussetzen {0};give blue_aussetzen {0}
+give yellow_richtungswechsel {0};give green_richtungswechsel {0};give red_richtungswechsel {0};give blue_richtungswechsel {0}

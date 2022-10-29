@@ -32,6 +32,7 @@ startCardCount = 2
 
 class gameMaster:
     def __init__(self):
+
         self.twoPlusAdder = 0
 
         self.scoreboard = {}
@@ -48,6 +49,7 @@ class gameMaster:
         self.playerNames = {}
         self.playerClasses = {}
         self.watchers = []
+        self.wonPlayers = []
 
         self.playerDeck = {}
         self.availableCards = deck
@@ -157,26 +159,24 @@ class gameMaster:
 
     def playerWin(self, playerId):
         print(f"player {playerId} Finished!")
-        self.watchers.append(self.playerClasses[playerId])
+
+        # tell player he won. Automatically reconnects thus automatically removing all informations of the player in the game
+        self.wonPlayers.append(self.playerNames[playerId])
+
+        # message everyone that the player has won/finished
+        if len(self.tables) > 0:
+            self.sendTable({"type": "playerFinished",
+                           "dat": self.playerNames[playerId]})
+        else:
+            self.addEvents({"type": "action", "dat":
+                            {"type": "playerFinished",
+                             "dat": self.playerNames[playerId]}})
+            self.sendWatcher({"type": "action", "dat":
+                              {"type": "playerFinished",
+                               "dat": self.playerNames[playerId]}})
 
         self.playerClasses[playerId].send_message(
-            json.dumps({"type": "action", "dat": "reconnect"}))
-        # self.playerClasses[playerId].send_message(
-        #    json.dumps({"type": "statuz", "dat": "watcher"}))
-
-        # remove player from all variables connected with the game
-        self.players.remove(playerId)
-        self.playerClasses.pop(playerId)
-        if playerId in self.playerNames.keys():
-            self.playerNames.pop(playerId)
-
-        if playerId in self.playerDeck.keys():
-            for x in self.playerDeck[playerId]:
-                print(
-                    f"what tha hell?!?! player {playerId} should have no cards in his deck")
-                self.availableCards.append(x)
-            self.playerDeck.pop(playerId)
-        master.easyEvents("disconnect")
+            json.dumps({"type": "action", "dat": {"type": "won", "dat": str(len(self.wonPlayers))}}))
 
     def layCard(self, card, playerId):
         if playerId != self.players[self.currentPlayer]:
@@ -501,6 +501,8 @@ class gameMaster:
             x.send_message(json.dumps(
                 {"type": "message", "dat": "Neues Spiel!"}))
 
+        self.wonPlayers = []
+
     def sendTableDat(self, table):
         #table.send_message(json.dumps({"type": "", "dat": ""}))
         table.send_message(json.dumps({"type": "players",
@@ -524,6 +526,11 @@ class gameMaster:
             "type": "currentPlayer",
             "dat": self.currentPlayer
         }))
+
+        # won players
+        for x in self.wonPlayers:
+            table.send_message(json.dumps({"type": "playerFinished",
+                                           "dat": x}))
 
     def sendWatcherDat(self, watcher):
         # players
@@ -553,6 +560,12 @@ class gameMaster:
             "type": "currentPlayer",
             "dat": self.currentPlayer
         }}))
+
+        # won players
+        for x in self.wonPlayers:
+            watcher.send_message(json.dumps({"type": "action", "dat":
+                                             {"type": "playerFinished",
+                                              "dat": x}}))
 
 
 master = gameMaster()
@@ -704,6 +717,12 @@ class Player(WebSocket):
                         master.watchers.append(self)
                         master.sendWatcherDat(self)
                 elif data["dat"] == "watcher":
+                    self.type = "watcher"
+                    if len(master.tables) != 0:
+                        self.send_message(json.dumps({
+                            "type": "action",
+                            "dat": "hasTable"
+                        }))
                     self.send_message(json.dumps(
                         {"type": "message", "dat": "Du bist als zuschauer verbunden"}))
                     self.send_message(json.dumps(
@@ -717,6 +736,10 @@ class Player(WebSocket):
                         {"type": "message", "dat": "Als Tisch verbunden"}))
                     master.sendTableDat(self)
                     master.addEvents({
+                        "type": "action",
+                        "dat": "hasTable"
+                    })
+                    master.sendWatcher({
                         "type": "action",
                         "dat": "hasTable"
                     })
@@ -740,8 +763,12 @@ class Player(WebSocket):
         try:
             global master
             if self.type == "player":
-                master.players.remove(self.playerId)
-                master.playerClasses.pop(self.playerId)
+                if self.playerId in master.players:
+                    master.players.remove(self.playerId)
+
+                if self.playerId in master.playerClasses.keys():
+                    master.playerClasses.pop(self.playerId)
+
                 if self.playerId in master.playerNames.keys():
                     master.playerNames.pop(self.playerId)
 
@@ -749,6 +776,10 @@ class Player(WebSocket):
                     for x in master.playerDeck[self.playerId]:
                         master.availableCards.append(x)
                     master.playerDeck.pop(self.playerId)
+
+                # check if currentPlayer id needs to change, because the player has disconnected
+                if master.currentPlayer >= len(master.players):
+                    master.currentPlayer = len(master.players)-1
             elif self.type == "table":
                 master.tables.remove(self)
             elif self.type == "watcher":

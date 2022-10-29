@@ -24,7 +24,8 @@ function connect() {
     currentPlayer = -1;
 
     ws.onopen = function (event) {
-        ws.send(JSON.stringify({ "type": "typeStatus", "dat": wantsType }))
+        document.querySelector("#wonPlayers").innerHTML = "";
+        ws.send(JSON.stringify({ "type": "typeStatus", "dat": wantsType }));
         document.querySelector("#connected_status").style.display = "none";
     }
     ws.onmessage = async function (event) {
@@ -283,9 +284,19 @@ function connect() {
             else if (data["dat"] == "hasTable") {
                 //hide all things displayed on table
                 hasTable = true;
-                var toHide = ["#playerList", "#stapel"];
+                var toHide = ["#playerList", "#stapel", "#wonPlayersBody"];
                 for (var x of toHide) {
                     document.querySelector(x).style.display = "none";
+                }
+
+                if (playerStatus == "watcher") {
+                    if (hasTable) {
+                        document.querySelector("#lookOnTable").style.display = "";
+                    } else {
+                        document.querySelector("#lookOnTable").style.display = "none";
+                    }
+                } else {
+                    document.querySelector("#lookOnTable").style.display = "none";
                 }
             }
             else if (data["dat"] == "slectCard") {
@@ -299,6 +310,20 @@ function connect() {
             else if (data["dat"] == "reconnect") {
                 reconnect();
                 return;
+            }
+            else if (data["dat"]["type"] == "won") {
+                reconnect();
+                document.querySelector("#winNum").innerText = data["dat"]["dat"];
+                document.querySelector("#winScreen").style.display = "flex";
+                return;
+            }
+            else if (data["dat"]["type"] == "playerFinished") {
+                if (hasTable == false) {
+                    document.querySelector("#wonPlayersBody").style.display = "";
+                }
+                var li = document.createElement("li");
+                li.innerText = data["dat"]["dat"];
+                document.querySelector("#wonPlayers").append(li);
             }
         }
         else if (data["type"] == "status") {
@@ -410,8 +435,9 @@ function updateCombinations() {
 function reconnect() {
     document.querySelector("#playerList").innerHTML = "";
     document.querySelector("#drawCard").style.display = "none";
-    ws.close();
     playerStatus = "reconnect";
+    ws.onclose = () => { };
+    ws.close();
     connect();
 }
 connect();
@@ -447,18 +473,18 @@ async function slowRemove(element) {
 }
 
 function selectColor(color) {
-    if (playerStatus == "waiting_for_color") {
-        ws.send(JSON.stringify({ "type": "select_color", "dat": color }))
-    } else {
-        addMessage("Du kannst gerade keine Farbe wählen!");
-    }
+    //if (playerStatus == "waiting_for_color") {
+    ws.send(JSON.stringify({ "type": "select_color", "dat": color }))
+    //} else {
+    //    addMessage("Du kannst gerade keine Farbe wählen!");
+    //}
 }
 function layCard(card) {
-    if (playerStatus == "slectCard" || playerStatus == "2+_Desicion") {
-        ws.send(JSON.stringify({ "type": "lay_card", "dat": [card] }))
-    } else {
-        addMessage("Du bist gerade nicht dran");
-    }
+    //if (playerStatus == "slectCard" || playerStatus == "2+_Desicion") {
+    ws.send(JSON.stringify({ "type": "lay_card", "dat": [card] }))
+    //} else {
+    //    addMessage("Du bist gerade nicht dran");
+    //}
 }
 
 function cardCheck() {

@@ -3,10 +3,12 @@ const maxCardRotation = 10;
 
 ws.onclose = function (event) {
     console.error(event);
+    document.querySelector("#connected_status").style.display = "";
     addMessage("Fehler: Die verbindung wurde geschlossen!");
 }
 ws.onopen = function (event) {
-    ws.send(JSON.stringify({ "type": "typeStatus", "dat": "table" }))
+    ws.send(JSON.stringify({ "type": "typeStatus", "dat": "table" }));
+    document.querySelector("#connected_status").style.display = "none";
 }
 
 var playerLookup = {}
@@ -139,9 +141,15 @@ ws.onmessage = async function (event) {
         document.querySelector("#stapel").append(p)
         return;
     }
-    else if (data["type"] == "removeLastLyingCard") {
+    if (data["type"] == "removeLastLyingCard") {
         document.querySelector("#stapel").firstChild.remove()
         return;
+    }
+    if (data["type"] == "playerFinished") {
+        document.querySelector("#wonPlayersBody").style.display = "";
+        var li = document.createElement("li");
+        li.innerText = data["dat"];
+        document.querySelector("#wonPlayers").append(li);
     }
 
     addMessage(JSON.stringify(data));

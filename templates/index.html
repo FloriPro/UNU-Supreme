@@ -16,18 +16,13 @@
 </head>
 
 <body>
-    <div id="colorInput" style="
-    height: 100%;
-    width: 100%;
-    position: fixed;
-    top: 0px;
-    left: 0px;
-    background-color: rgba(0, 0, 0, 0.288);
-    display: none;
-    align-content: center;
-    justify-content: space-evenly;
-    align-items: center;
-    z-index: 2;">
+    <div id="winScreen" class="input">
+        <div style="background-color: white; padding: 10px;">
+            <p>Du bist <span id="winNum">X</span>ter geworden</p>
+            <button onclick='document.querySelector("#winScreen").style.display = "none";'>Ok</button>
+        </div>
+    </div>
+    <div id="colorInput" class="input">
         <div style="background-color: white; padding: 10px;">
             <h1>Farbe auswählen</h1>
             <button onclick="selectColor('red')">Rot</button>
@@ -36,23 +31,12 @@
             <button onclick="selectColor('blue')">Blau</button>
         </div>
     </div>
-    <div id="twoxInput" style="
-    height: 100%;
-    width: 100%;
-    position: fixed;
-    top: 0px;
-    left: 0px;
-    background-color: rgba(0, 0, 0, 0.288);
-    display: none;
-    align-content: center;
-    justify-content: space-evenly;
-    align-items: center;
-    z-index: 2;">
+    <div id="twoxInput" class="input">
         <div style="background-color: white; padding: 10px;">
             <div id="twoxinputPositions">
 
             </div>
-            <button id="withdrawTwo" onclick="ws.send(JSON.stringify({'type':'withdraw2x'}))">2 Ziehen</button>
+            <button id="withdrawTwo" onclick="ws.send(JSON.stringify({'type':'withdraw2x'}))">... Ziehen</button>
         </div>
     </div>
     <p id="connected_status" style="background-color: red;">Nicht verbunden!</p>
@@ -84,6 +68,12 @@
     <br>
 
     <div id="combinations" style="display: flex;">
+    </div>
+
+    <div id="wonPlayersBody" style="display: none;">
+        <p>Gewonnene Spieler:</p>
+        <ol id="wonPlayers">
+        </ol>
     </div>
 
     <h1 id="lookOnTable" style="display: none;">Hier kannst du zurzeit nichts machen</h1>
