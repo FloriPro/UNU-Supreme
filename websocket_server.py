@@ -1,5 +1,4 @@
 from math import ceil
-from msilib.schema import tables
 from threading import Thread
 from time import sleep
 from simple_websocket_server import WebSocketServer, WebSocket
