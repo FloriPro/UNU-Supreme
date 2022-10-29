@@ -256,22 +256,14 @@ function connect() {
                 return;
             }
             else if (data["dat"]["type"] == "addCard") {
-                var x = data["dat"]["dat"]
+                var x = data["dat"]["dat"];
 
                 var p = getCard(x);
-                //var img = document.createElement("img")
-                //img.src = "/static/cards/" + x + ".png"
-                //img.onerror = (event) => {
-                //    event.srcElement.style.background = "aqua";
-                //}
                 p.onclick = (event) => {
                     layCard(event.target.alt);
                 }
                 p.className = "ownDeck"
-                //img.alt = x
-                //img.width = "86";
-                //img.height = "129";
-
+                
                 document.querySelector("#deck").append(p);
                 updateCombinations();
                 return;

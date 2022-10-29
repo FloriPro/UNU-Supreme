@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <script>const serverHost = `{{serverHost}}`;</script>
+    <title>Multiple instances</title>
+    <script>
+        function make() {
+            var c = parseInt(prompt('anzahl'));
+            for (var x = 0; x < c; x++) {
+                var d = document.createElement("iframe");
+
+                d.src = "http://localhost/";
+                d.style.height = "500px";
+
+                document.querySelector("#all").append(d);
+            }
+        }
+    </script>
+</head>
+
+<body>
+    <button onclick="make();">Create</button>
+    <div id="all">
+
+    </div>
+</body>
+
+</html>

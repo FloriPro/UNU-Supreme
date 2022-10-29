@@ -7,12 +7,20 @@ app.config['TEMPLATES_AUTO_RELOAD'] = True
 app.jinja_env.auto_reload = True
 app.config.from_object(__name__)
 
-serverHost = "${location.hostname}" #${location.hostname}
+serverHost = "${location.hostname}"  # ${location.hostname}
 
 
 @app.route('/')
 def projects():
     return render_template("index.html", title='UNO Supreme', serverHost=serverHost)
+
+
+@app.route('/many')
+def many():
+    return render_template("many.html", title='UNO Supreme', serverHost=serverHost)
+@app.route('/wsT')
+def wsT():
+    return render_template("websocketTester.html", title='UNO Supreme', serverHost=serverHost)
 
 
 @app.route("/consoleEval", methods=["POST"])
