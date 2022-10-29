@@ -829,7 +829,7 @@ class Player(WebSocket):
                     master.playerDeck.pop(self.playerId)
 
                 # check if currentPlayer id needs to change, because the player has disconnected
-                if master.currentPlayer >= len(master.players):
+                if master.status == "playing" and master.currentPlayer >= len(master.players):
                     print("toBig currentPlayer")
                     master.currentPlayer = len(master.players)-1
                     if master.currentPlayer < 0:
