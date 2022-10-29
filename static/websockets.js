@@ -1,8 +1,13 @@
 let connections = 0;
 
 class player {
-    constructor() {
+    constructor(id) {
+        this.id = id;
+        this.debug = [];
+
         this.deck = []
+        this.top = "";
+
         this.ws = new WebSocket(`ws://${serverHost}:8000/`);
         this.ws.ws = this.ws;
         this.ws.t = this;
@@ -26,9 +31,20 @@ class player {
             this.ws.send(JSON.stringify({ "type": "typeStatus", "dat": "player" }));
         }
         this.ws.onmessage = async function (event) {
+            /**
+             * @type {player}
+             */
             var thi = this.t;
             var data = JSON.parse(event.data);
-            //console.log(data);
+            thi.debug.push(data);
+            if (thi.debug.length > 500) {
+                thi.debug.shift();
+            }
+            if (data["type"] != "stats" && data["dat"]["type"] != "players") {
+                //console.log(thi.id + " | " + event.data);
+            }
+
+
             if (data["type"] == "message") {
                 return;
             }
@@ -66,31 +82,47 @@ class player {
 
                 //update your available cards
                 if (data["dat"]["type"] == "deck") {
+                    thi.deck = data["dat"]["dat"];
                     return;
                 }
 
                 //reset the cards that were allready set
                 if (data["dat"]["type"] == "lyingCards") {
+                    thi.top = data["dat"]["dat"][data["dat"]["dat"].length - 1];
                     return;
                 }
             }
             else if (data["type"] == "action") {
                 if (data["dat"] == "get_name") {
+                    thi.ws.send(JSON.stringify({ "type": "get_name", "dat": "Bot_" + thi.id }))
                     return;
                 }
                 if (data["dat"] == "select_color") {
+                    thi.ws.send(JSON.stringify({ "type": "select_color", "dat": "green" }))
                     return;
                 }
                 if (data["dat"] == "slect2+Card") {
+                    thi.ws.send(JSON.stringify({ "type": "withdraw2x" }));
                     return;
                 }
                 else if (data["dat"]["type"] == "lyingCards") {
+                    thi.top = data["dat"]["dat"];
                     return;
                 }
                 else if (data["dat"] == "removeCard") {
+                    var i = thi.deck.indexOf(data["dat2"]);
+                    thi.deck.splice(i, 1);
+                    if (thi.deck.length == 0) {
+                        //reconnect
+                        thi.ws.close();
+                    }
                     return;
                 }
                 else if (data["dat"]["type"] == "addCard") {
+                    thi.deck.push(data["dat"]["dat"]);
+                    if (thi.playerStatus == "slectCard") {
+                        okCards(thi);
+                    }
                     return;
                 }
                 else if (data["dat"] == "startGame") {
@@ -101,17 +133,21 @@ class player {
                     hasTable = true;
                 }
                 else if (data["dat"] == "slectCard") {
+                    okCards(thi);
                     return;
                 }
                 else if (data["dat"] == "removeLastLyingCard") {
                     return;
                 }
                 else if (data["dat"] == "reconnect") {
-                    reconnect();
+                    //reconnect
+                    thi.ws.close();
                     return;
                 }
                 else if (data["dat"]["type"] == "won") {
-                    reconnect();
+                    //reconnect
+                    thi.ws.close();
+                    thi.playerStatus = "exit";
                     return;
                 }
                 else if (data["dat"]["type"] == "playerFinished") {
@@ -122,6 +158,43 @@ class player {
                 return;
             }
         }
+    }
+}
+
+/**
+ * 
+ * @param {player} thi 
+ */
+async function okCards(thi) {
+    if (thi.playerStatus == "exit") {
+        console.log("err");
+        return;
+    }
+
+    var lay = undefined;;
+
+    var top = thi.top.split("_");
+
+    for (var x of thi.deck) {
+        var c = x.split("_");
+        if ([].includes(c[1])) {
+            //pass
+        }
+        else if (c[0] == top[0]) {
+            lay = x;
+        }
+        else if (c[1] == top[1]) {
+            lay = x;
+        }
+    }
+
+    await new Promise((resolve, reject) => { setTimeout(resolve, 1) })
+
+    if (lay == undefined) {
+        thi.ws.send(JSON.stringify({ "type": "drawCard" }));
+    } else {
+        thi.ws.send(JSON.stringify({ "type": "lay_card", "dat": [lay] }));
+        //console.log("lay " + lay + " | " + thi.id);
     }
 }
 
@@ -136,6 +209,7 @@ function removeWS() {
 
 let players = []
 var a = parseInt(prompt("anzahl"));
+//var a = 1;
 for (var x = 0; x < a; x++) {
-    players.push(new player());
+    players.push(new player(x));
 }

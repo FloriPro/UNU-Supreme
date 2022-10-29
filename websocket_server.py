@@ -9,10 +9,18 @@ import random
 import json
 
 
-cards = {"red":    {2: ["2+", "aussetzen", "richtungswechsel", "1", "2", "3", "4", "5", "6", "7", "8", "9", "komunist"]},
-         "green":  {2: ["2+", "aussetzen", "richtungswechsel", "1", "2", "3", "4", "5", "6", "7", "8", "9", "komunist"]},
-         "yellow": {2: ["2+", "aussetzen", "richtungswechsel", "1", "2", "3", "4", "5", "6", "7", "8", "9", "komunist"]},
-         "blue":   {2: ["2+", "aussetzen", "richtungswechsel", "1", "2", "3", "4", "5", "6", "7", "8", "9", "komunist"]},
+cards = {"red":    {2: ["2+", "aussetzen", "richtungswechsel", "1", "2", "3", "4", "5", "6", "7", "8", "9",
+                        "komunist"
+                        ]},
+         "green":  {2: ["2+", "aussetzen", "richtungswechsel", "1", "2", "3", "4", "5", "6", "7", "8", "9",
+                        "komunist"
+                        ]},
+         "yellow": {2: ["2+", "aussetzen", "richtungswechsel", "1", "2", "3", "4", "5", "6", "7", "8", "9",
+                        "komunist"
+                        ]},
+         "blue":   {2: ["2+", "aussetzen", "richtungswechsel", "1", "2", "3", "4", "5", "6", "7", "8", "9",
+                        "komunist"
+                        ]},
          "": {4: ["farbwechsel4+", "farbwechsel"]}}
 
 deck = []
@@ -27,6 +35,7 @@ deck += deck
 deck += deck
 deck += deck
 
+noCardLimit = False
 startCardCount = 2
 
 
@@ -44,6 +53,7 @@ class gameMaster:
         self.direction = 1
 
         self.tables = []
+        self.otherTables = []
 
         self.players = []
         self.playerNames = {}
@@ -59,6 +69,8 @@ class gameMaster:
 
     def sendTable(self, dat):
         for value in self.tables:
+            value.send_message(json.dumps(dat))
+        for value in self.otherTables:
             value.send_message(json.dumps(dat))
 
     def sendWatcher(self, dat):
@@ -160,23 +172,27 @@ class gameMaster:
     def playerWin(self, playerId):
         print(f"player {playerId} Finished!")
 
-        # tell player he won. Automatically reconnects thus automatically removing all informations of the player in the game
-        self.wonPlayers.append(self.playerNames[playerId])
+        name = "["+str(playerId)+"]"
+        if (playerId in self.playerNames):
+            name = self.playerNames[playerId]
+        self.wonPlayers.append(name)
 
         # message everyone that the player has won/finished
         if len(self.tables) > 0:
             self.sendTable({"type": "playerFinished",
-                           "dat": self.playerNames[playerId]})
+                           "dat": name})
         else:
             self.addEvents({"type": "action", "dat":
                             {"type": "playerFinished",
-                             "dat": self.playerNames[playerId]}})
+                             "dat": name}})
             self.sendWatcher({"type": "action", "dat":
                               {"type": "playerFinished",
-                               "dat": self.playerNames[playerId]}})
+                               "dat": name}})
 
+        # tell player he won. Automatically reconnects thus automatically removing all informations of the player in the game
         self.playerClasses[playerId].send_message(
             json.dumps({"type": "action", "dat": {"type": "won", "dat": str(len(self.wonPlayers))}}))
+        self.playerClasses[playerId].handle_close()
 
     def layCard(self, card, playerId):
         if playerId != self.players[self.currentPlayer]:
@@ -312,6 +328,7 @@ class gameMaster:
             if len(self.playerDeck[playerId]) == 0:
                 self.playerWin(playerId)
 
+            self.cardCache = ""
             self.nextPlayer()
         else:
             self.playerClasses[playerId].send_message(json.dumps(
@@ -446,7 +463,7 @@ class gameMaster:
             self.playerClasses[playerId].send_message(json.dumps(
                 {"type": "message", "dat": "Du bist zurzeit nicht am zug!"}))
             return
-        if len(self.playerDeck[playerId]) < 25:
+        if len(self.playerDeck[playerId]) < 25 or noCardLimit:
             choice = random.randint(0, len(self.availableCards)-1)
             self.playerDeck[playerId].append(self.availableCards[choice])
             self.addEvent(playerId,
@@ -460,6 +477,26 @@ class gameMaster:
         else:
             self.playerClasses[playerId].send_message(json.dumps(
                 {"type": "message", "dat": "Du hast schon zu viele Karten"}))
+
+            # check if player has any card to lay down
+            has = False
+            for card in self.playerDeck[playerId]:
+                c = card.split("_")
+                lc = self.lyingCards[-1].split("_")
+                ok = True
+                if c[0] == "":
+                    pass
+                else:
+                    if c[0] != lc[0] and c[1] != lc[1]:
+                        ok = False
+                if ok:
+                    has = True
+            if not has:
+                self.playerClasses[playerId].send_message(json.dumps(
+                    {"type": "message", "dat": "Da du keine Karten legen kannst wurde der nächste Spieler aufgerufen."}))
+                self.nextPlayer()
+            else:
+                pass
 
     def addEvent(self, player, dat):
         if not player in self.events:
@@ -498,6 +535,9 @@ class gameMaster:
             x.send_message(json.dumps({"type": "action", "dat": "reconnect"}))
 
         for x in self.tables:
+            x.send_message(json.dumps(
+                {"type": "message", "dat": "Neues Spiel!"}))
+        for x in self.otherTables:
             x.send_message(json.dumps(
                 {"type": "message", "dat": "Neues Spiel!"}))
 
@@ -630,7 +670,15 @@ def consoleEval(dat):
                                    }})
 
         master.playerWin(playerId)
+        master.nextPlayer()
+
         return f"player {playerId} has now finished!"
+    elif command[0] == "start":
+        master.start()
+        return "started"
+    elif command[0] == "nextPlayer":
+        master.nextPlayer()
+        return "ok"
     return "command did not return! Does it realy exist?"
 
 
@@ -639,6 +687,7 @@ class Player(WebSocket):
         try:
             global master
             data = json.loads(self.data)
+            # print(self.data)
 
             if data["type"] == "start_game":
                 master.start()
@@ -731,18 +780,21 @@ class Player(WebSocket):
                     master.sendWatcherDat(self)
                 elif data["dat"] == "table":
                     self.type = "table"
-                    master.tables.append(self)
                     self.send_message(json.dumps(
                         {"type": "message", "dat": "Als Tisch verbunden"}))
                     master.sendTableDat(self)
-                    master.addEvents({
-                        "type": "action",
-                        "dat": "hasTable"
-                    })
-                    master.sendWatcher({
-                        "type": "action",
-                        "dat": "hasTable"
-                    })
+                    if (data["dat2"] == "normal"):
+                        master.tables.append(self)
+                        master.addEvents({
+                            "type": "action",
+                            "dat": "hasTable"
+                        })
+                        master.sendWatcher({
+                            "type": "action",
+                            "dat": "hasTable"
+                        })
+                    else:
+                        master.otherTables.append(self)
                 elif data["dat"] == "console":
                     self.type = "console"
                     self.send_message("connected!")
@@ -779,9 +831,16 @@ class Player(WebSocket):
 
                 # check if currentPlayer id needs to change, because the player has disconnected
                 if master.currentPlayer >= len(master.players):
+                    print("toBig currentPlayer")
                     master.currentPlayer = len(master.players)-1
+                    if master.currentPlayer < 0:
+                        master.currentPlayer = 0
+                    master.askPlayer()
             elif self.type == "table":
-                master.tables.remove(self)
+                if self in master.tables:
+                    master.tables.remove(self)
+                if self in master.otherTables:
+                    master.otherTables.remove(self)
             elif self.type == "watcher":
                 master.watchers.remove(self)
             master.easyEvents("disconnect")

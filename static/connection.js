@@ -100,7 +100,7 @@ function connect() {
 
                 var c = document.querySelector("#player_" + currentPlayer);
                 if (c != undefined) {
-                    c.style.filter = `drop-shadow(yellow 0px 0px 37px)`;
+                    c.style.filter = `drop-shadow(yellow 0px 0px 8px)`;
                 }
                 return;
             }
@@ -263,7 +263,7 @@ function connect() {
                     layCard(event.target.alt);
                 }
                 p.className = "ownDeck"
-                
+
                 document.querySelector("#deck").append(p);
                 updateCombinations();
                 return;
@@ -316,6 +316,7 @@ function connect() {
                 var li = document.createElement("li");
                 li.innerText = data["dat"]["dat"];
                 document.querySelector("#wonPlayers").append(li);
+                return;
             }
         }
         else if (data["type"] == "status") {

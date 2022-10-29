@@ -1,13 +1,39 @@
 let ws = new WebSocket(`ws://${serverHost}:8000/`);
 const maxCardRotation = 10;
 
+let typ = "normal";
+
+
+if (location.search != "") {
+    var s = location.search.replace("?", "");
+
+    document.querySelector("#playerList").style.display = "none";
+    document.querySelector("#stapel").style.display = "none";
+    document.querySelector("#wonPlayersBodyHider").style.display = "none";
+
+    if (s == "stapel") {
+        document.querySelector("#stapel").style.display = "";
+    }
+    else if (s == "spieler") {
+        document.querySelector("#playerList").style.display = "";
+    }
+    else if (s == "scoreboard") {
+        document.querySelector("#wonPlayersBodyHider").style.display = "";
+    }
+    else {
+        alert("stapel, spieler, scoreboard");
+    }
+    typ = "other";
+}
+
+
 ws.onclose = function (event) {
     console.error(event);
     document.querySelector("#connected_status").style.display = "";
     addMessage("Fehler: Die verbindung wurde geschlossen!");
 }
 ws.onopen = function (event) {
-    ws.send(JSON.stringify({ "type": "typeStatus", "dat": "table" }));
+    ws.send(JSON.stringify({ "type": "typeStatus", "dat": "table", "dat2": typ }));
     document.querySelector("#connected_status").style.display = "none";
 }
 
@@ -150,6 +176,7 @@ ws.onmessage = async function (event) {
         var li = document.createElement("li");
         li.innerText = data["dat"];
         document.querySelector("#wonPlayers").append(li);
+        return;
     }
 
     addMessage(JSON.stringify(data));
