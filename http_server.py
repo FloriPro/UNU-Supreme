@@ -1,4 +1,5 @@
 import threading
+from time import sleep
 from flask import Flask
 from flask import render_template, request
 
@@ -18,6 +19,8 @@ def projects():
 @app.route('/many')
 def many():
     return render_template("many.html", title='UNO Supreme', serverHost=serverHost)
+
+
 @app.route('/wsT')
 def wsT():
     return render_template("websocketTester.html", title='UNO Supreme', serverHost=serverHost)
@@ -47,3 +50,9 @@ def flaskServer():
 
 def run():
     threading.Thread(target=flaskServer, daemon=True).start()
+
+
+if __name__ == "__main__":
+    run()
+    while True:
+        sleep(100)

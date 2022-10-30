@@ -3,7 +3,16 @@ const colors = ["red", "green", "blue", "yellow"];
 const workingCombis = ["aussetzen", "richtungswechsel", "komunist"];
 let wantsType = "player";
 
+/**
+ * @type {{[cardName: string]:string}}
+ */
+let cardImages = {};
 
+/**
+ * @type {HTMLImageElement}
+ */
+let currentlyClicked = undefined;
+let secondTime = false;
 let ws;
 let playerStatus;
 let playerId;
@@ -24,9 +33,16 @@ function connect() {
     currentPlayer = -1;
 
     ws.onopen = function (event) {
+        ws.send(JSON.stringify({ "type": "allCards" }));
+        var isSecondTime = "false";
+        if (secondTime) {
+            isSecondTime = "secondTime";
+        }
+
         document.querySelector("#wonPlayers").innerHTML = "";
-        ws.send(JSON.stringify({ "type": "typeStatus", "dat": wantsType }));
+        ws.send(JSON.stringify({ "type": "typeStatus", "dat": wantsType, "dat2": isSecondTime }));
         document.querySelector("#connected_status").style.display = "none";
+        secondTime = true;
     }
     ws.onmessage = async function (event) {
         var data = JSON.parse(event.data);
@@ -36,6 +52,11 @@ function connect() {
             return;
         }
         else if (data["type"] == "stats") {
+            //preloading all card images
+            if (data["dat"]["type"] == "allCards") {
+                loadCardImages(data["dat"]["dat"])
+            }
+
             //load/update player names
             if (data["dat"]["type"] == "players") {
                 document.querySelector("#playerList").innerHTML = "";
@@ -164,7 +185,7 @@ function connect() {
                     //    event.srcElement.style.background = "aqua";
                     //}
                     p.onclick = (event) => {
-                        layCard(event.target.alt);
+                        layCard(event.target.alt, p);
                     }
                     p.className = "ownDeck"
                     //img.alt = x
@@ -203,7 +224,11 @@ function connect() {
         }
         else if (data["type"] == "action") {
             if (data["dat"] == "get_name") {
-                document.querySelector("#nameInput").style.display = "";
+                if (document.querySelector("#nameInputInput").value != "") {
+                    ws.send(JSON.stringify({ "type": "get_name", "dat": document.querySelector("#nameInputInput").value }));
+                } else {
+                    document.querySelector("#nameInput").style.display = "";
+                }
                 return;
             }
             if (data["dat"] == "select_color") {
@@ -251,7 +276,14 @@ function connect() {
                 return;
             }
             else if (data["dat"] == "removeCard") {
-                slowRemove(document.querySelector('.ownDeck[alt="' + data["dat2"] + '"]:not(.remove)'));
+                var c = undefined;
+                if (currentlyClicked != undefined && currentlyClicked.alt == data["dat2"]) {
+                    c = currentlyClicked;
+                } else {
+                    c = document.querySelector('.ownDeck[alt="' + data["dat2"] + '"]:not(.remove)');
+                }
+
+                slowRemove(c);
                 updateCombinations();
                 return;
             }
@@ -260,7 +292,7 @@ function connect() {
 
                 var p = getCard(x);
                 p.onclick = (event) => {
-                    layCard(event.target.alt);
+                    layCard(event.target.alt, p);
                 }
                 p.className = "ownDeck"
 
@@ -353,12 +385,30 @@ function connect() {
             } else {
                 document.querySelector("#twoxinputPositions").innerHTML = "";
             }
-
             return;
         }
 
         console.log(data);
     }
+}
+
+async function loadCardImages(cards) {
+    for (var x of cards) {
+        loadCardImage(x);
+    }
+}
+async function loadCardImage(x) {
+    if (cardImages[x] != undefined) { return; }
+    var p = new Promise(async (resolve, reject) => {
+        var reader = new FileReader();
+        reader.onload = async () => {
+            resolve(reader.result)
+        }
+        reader.readAsDataURL(await (await fetch("/static/cards/" + x + ".png")).blob());
+    });
+    var out = await p;
+    cardImages[x] = out;
+    //TODO hide preloadIMG
 }
 
 function genCombiTeller(cards) {
@@ -408,8 +458,8 @@ function updateCombinations() {
             tested.push(x[1]);
         }
     }
-    console.log(combinations);
 
+    //show them with no animation
     document.querySelector("#combinations").innerHTML = "";
     for (var x of combinations) {
         if (workingCombis.includes(x)) {
@@ -428,6 +478,10 @@ function updateCombinations() {
 function reconnect() {
     document.querySelector("#playerList").innerHTML = "";
     document.querySelector("#drawCard").style.display = "none";
+    document.querySelector("#wonPlayersBody").style.display = "none";
+    document.querySelector("#deck").innerHTML = "";
+    document.querySelector("#stapel").innerHTML = "";
+
     playerStatus = "reconnect";
     ws.onclose = () => { };
     ws.close();
@@ -437,7 +491,11 @@ connect();
 
 function getCard(card) {
     var img = document.createElement("img")
-    img.src = "/static/cards/" + card + ".png";
+    if (cardImages[card] !== undefined) {
+        img.src = cardImages[card];
+    } else {
+        img.src = "/static/cards/" + card + ".png";
+    }
     img.onerror = (event) => {
         event.srcElement.style.background = event.target.alt.split("_")[0];
     }
@@ -472,12 +530,9 @@ function selectColor(color) {
     //    addMessage("Du kannst gerade keine Farbe wählen!");
     //}
 }
-function layCard(card) {
-    //if (playerStatus == "slectCard" || playerStatus == "2+_Desicion") {
+function layCard(card, thisCard) {
+    currentlyClicked = thisCard;
     ws.send(JSON.stringify({ "type": "lay_card", "dat": [card] }))
-    //} else {
-    //    addMessage("Du bist gerade nicht dran");
-    //}
 }
 
 function cardCheck() {

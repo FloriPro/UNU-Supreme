@@ -39,7 +39,8 @@
             <button id="withdrawTwo" onclick="ws.send(JSON.stringify({'type':'withdraw2x'}))">... Ziehen</button>
         </div>
     </div>
-    <p id="connected_status" style="background-color: red;">Nicht verbunden!</p>
+    <p id="connected_status" style="background-color: red;">Nicht verbunden! <a href="javascript:reconnect()" style="color: white;">Neu
+            verbinden</a></p>
     <div id="alerts" style="right: 0;position: fixed;max-width: 200px;min-width: 50px;z-index: 999999;"></div>
     <p id="status" style="display: none;">Status: </p>
     <div id="nameInput" style="display: none;">
@@ -78,8 +79,10 @@
 
     <h1 id="lookOnTable" style="display: none;">Hier kannst du zurzeit nichts machen</h1>
 
-    <button onclick='ws.send(JSON.stringify({"type":"start_game"}))' id="startGame" style="display: none;">Spiel
+    <button onclick='ws.send(JSON.stringify({"type":"start_game", "dat":prompt("start-code:")}))' id="startGame"
+        style="display: none;">Spiel
         starten</button>
+    <p id="preloadIMG">Preloading Images...</p>
 </body>
 
 </html>

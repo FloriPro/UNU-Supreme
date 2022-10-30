@@ -28,14 +28,16 @@ for color in cards.keys():
         for i in range(numbers):
             for cardType in cards[color][numbers]:
                 deck.append(color+"_"+cardType)
-
-deck += deck
-deck += deck
-deck += deck
-deck += deck
+allDeck = []
+allDeck += deck
+allDeck += deck
+allDeck += deck
+allDeck += deck
+allDeck += deck
 
 noCardLimit = False
 startCardCount = 2
+startCode = "pls"
 
 
 class gameMaster:
@@ -61,7 +63,7 @@ class gameMaster:
         self.wonPlayers = []
 
         self.playerDeck = {}
-        self.availableCards = deck
+        self.availableCards = allDeck
         self.lyingCards = []
 
         self.cardCache = ""
@@ -77,7 +79,7 @@ class gameMaster:
             x.send_message(json.dumps(dat))
 
     def setCards(self):
-        self.availableCards = deck
+        self.availableCards = allDeck
         iteration = 0
         for playerId in self.players:
             self.playerDeck[playerId] = []
@@ -191,7 +193,7 @@ class gameMaster:
         # tell player he won. Automatically reconnects thus automatically removing all informations of the player in the game
         self.playerClasses[playerId].send_message(
             json.dumps({"type": "action", "dat": {"type": "won", "dat": str(len(self.wonPlayers))}}))
-        self.playerClasses[playerId].handle_close()
+        self.playerClasses[playerId].handle_close(True)
 
     def layCard(self, card, playerId):
         if playerId != self.players[self.currentPlayer]:
@@ -334,6 +336,9 @@ class gameMaster:
                 {"type": "message", "dat": "Du bist zurzeit nicht am zug!"}))
 
     def nextPlayer(self, count=1):
+        if len(self.players) <= 1:
+            self.gameEnd()
+            return
         self.addEvent(self.players[self.currentPlayer], {
                       "type": "status", "dat": "playing"})
         for x in range(count):
@@ -479,6 +484,7 @@ class gameMaster:
 
             # check if player has any card to lay down
             has = False
+            maybeCard = None
             for card in self.playerDeck[playerId]:
                 c = card.split("_")
                 lc = self.lyingCards[-1].split("_")
@@ -490,6 +496,7 @@ class gameMaster:
                         ok = False
                 if ok:
                     has = True
+                    maybeCard = card
             if not has:
                 self.playerClasses[playerId].send_message(json.dumps(
                     {"type": "message", "dat": "Da du keine Karten legen kannst wurde der nächste Spieler aufgerufen."}))
@@ -518,27 +525,39 @@ class gameMaster:
             self.addEvents({"type": "action", "dat": "removeLastLyingCard"})
             self.sendWatcher({"type": "action", "dat": "removeLastLyingCard"})
             self.sendTable({"type": "removeLastLyingCard"})
-            self.availableCards.append(self.lyingCards[0])
+
+            card = self.lyingCards[0]
+            if card.split("_")[1] in ["farbwechsel", "farbwechsel4+"]:
+                card = "_"+card.split("_")[1]
+            self.availableCards.append(card)
             self.lyingCards = self.lyingCards[1:]
 
     def gameEnd(self):
+        threading.Thread(target=self.threadedEnd, daemon=True).start()
+
+    def threadedEnd(self):
+        sleep(1)
+        self.messageAll("Spiel vorbei. Nur noch ein Spieler übrig!")
+        self.messageAll("Ein neues Spiel wird gestarted.")
+        self.status = "waiting_for_players"
+        sleep(3)
         for x in self.watchers:
-            x.send_message(json.dumps(
-                {"type": "message", "dat": "Neues Spiel!"}))
+            # x.send_message(json.dumps(
+            #    {"type": "message", "dat": "Neues Spiel!"}))
             x.send_message(json.dumps({"type": "action", "dat": "reconnect"}))
 
         for y in self.players:
             x = self.playerClasses[y]
-            x.send_message(json.dumps(
-                {"type": "message", "dat": "Neues Spiel!"}))
+            # x.send_message(json.dumps(
+            #    {"type": "message", "dat": "Neues Spiel!"}))
             x.send_message(json.dumps({"type": "action", "dat": "reconnect"}))
 
-        for x in self.tables:
-            x.send_message(json.dumps(
-                {"type": "message", "dat": "Neues Spiel!"}))
-        for x in self.otherTables:
-            x.send_message(json.dumps(
-                {"type": "message", "dat": "Neues Spiel!"}))
+        # for x in self.tables:
+        #    x.send_message(json.dumps(
+        #        {"type": "message", "dat": "Neues Spiel!"}))
+        # for x in self.otherTables:
+        #    x.send_message(json.dumps(
+        #        {"type": "message", "dat": "Neues Spiel!"}))
 
         self.wonPlayers = []
 
@@ -623,61 +642,65 @@ def genPlayerId(inp):
 def consoleEval(dat):
     global master
     command = dat.split(" ")
-    if command[0] == "players":
-        returnDat = []
-        for player in master.players:
-            if player in master.playerNames.keys():
-                name = master.playerNames[player]
+    try:
+        if command[0] == "players":
+            returnDat = []
+            for player in master.players:
+                if player in master.playerNames.keys():
+                    name = master.playerNames[player]
+                else:
+                    name = "undefined"
+                returnDat.append(name+": "+str(player))
+                pass
+            return ",\n".join(returnDat)
+        elif command[0] == "give":
+            playerId = genPlayerId(command[2])
+            if playerId not in master.playerDeck.keys():
+                return "player doesn't exist"
+            master.playerDeck[playerId].append(command[1])
+            master.addEvent(playerId,
+                            {"type": "action", "dat": {
+                                "type": "addCard",
+                                "dat": command[1]
+
+                            }})
+            master.easyEvents("playerCardCount")
+            return "ok!"
+        elif command[0] == "get":
+            playerId = genPlayerId(command[1])
+            if playerId in master.playerDeck:
+                cards = ", ".join(master.playerDeck[playerId])
             else:
-                name = "undefined"
-            returnDat.append(name+": "+str(player))
-            pass
-        return ",\n".join(returnDat)
-    elif command[0] == "give":
-        playerId = genPlayerId(command[2])
-        if playerId not in master.playerDeck.keys():
-            return "player doesn't exist"
-        master.playerDeck[playerId].append(command[1])
-        master.addEvent(playerId,
-                        {"type": "action", "dat": {
-                            "type": "addCard",
-                            "dat": command[1]
+                cards = "player does not exist!"
+            return cards
+        elif command[0] == "setCurrentPlayer":
+            playerId = genPlayerId(command[1])
+            master.currentPlayer = playerId
+            return "set to " + str(master.currentPlayer)
+        elif command[0] == "getCurrentPlayer":
+            return "CurrentPlayer: " + str(master.currentPlayer)
+        elif command[0] == "win":
+            playerId = genPlayerId(command[1])
+            master.easyEvents("playerCardCount")
+            master.addEvent(playerId, {"type": "stats",
+                                       "dat": {
+                                           "type": "deck",
+                                           "dat": []
+                                       }})
 
-                        }})
-        master.easyEvents("playerCardCount")
-        return "ok!"
-    elif command[0] == "get":
-        playerId = genPlayerId(command[1])
-        if playerId in master.playerDeck:
-            cards = ", ".join(master.playerDeck[playerId])
-        else:
-            cards = "player does not exist!"
-        return cards
-    elif command[0] == "setCurrentPlayer":
-        playerId = genPlayerId(command[1])
-        master.currentPlayer = playerId
-        return "set to " + str(master.currentPlayer)
-    elif command[0] == "getCurrentPlayer":
-        return "CurrentPlayer: " + str(master.currentPlayer)
-    elif command[0] == "win":
-        playerId = genPlayerId(command[1])
-        master.easyEvents("playerCardCount")
-        master.addEvent(playerId, {"type": "stats",
-                                   "dat": {
-                                       "type": "deck",
-                                       "dat": []
-                                   }})
+            master.playerWin(playerId)
+            master.nextPlayer()
 
-        master.playerWin(playerId)
-        master.nextPlayer()
-
-        return f"player {playerId} has now finished!"
-    elif command[0] == "start":
-        master.start()
-        return "started"
-    elif command[0] == "nextPlayer":
-        master.nextPlayer()
-        return "ok"
+            return f"player {playerId} has now finished!"
+        elif command[0] == "start":
+            master.start()
+            return "started"
+        elif command[0] == "nextPlayer":
+            master.nextPlayer()
+            return "ok"
+    except Exception as e:
+        return traceback.format_exc()
+        # return "error: " + str(e)
     return "command did not return! Does it realy exist?"
 
 
@@ -689,7 +712,14 @@ class Player(WebSocket):
             # print(self.data)
 
             if data["type"] == "start_game":
-                master.start()
+                if data["dat"] == startCode:
+                    master.start()
+                else:
+                    self.send_message(json.dumps(
+                        {"type": "message", "dat": "Error: Wrong start code"}))
+            elif data["type"] == "allCards":
+                self.send_message(json.dumps(
+                    {"type": "stats", "dat": {"type": "allCards", "dat": deck}}))
 
             elif self.currentAction == "get_name" and data["type"] == "get_name":
                 if (data["dat"] != "" and data["dat"] not in master.playerNames.values()):
@@ -728,6 +758,11 @@ class Player(WebSocket):
                 master.withdraw2x(self.playerId)
             elif data["type"] == "typeStatus":
                 if data["dat"] == "player":
+                    secondTime = False
+                    if "dat2" in data:
+                        if data["dat2"] == "secondTime":
+                            secondTime = True
+
                     self.type = "player"
                     if len(master.tables) != 0:
                         self.send_message(json.dumps({
@@ -736,7 +771,11 @@ class Player(WebSocket):
                         }))
 
                     self.currentAction = ""
-                    self.playerId = random.randint(0, 9999999999999)
+                    r = 0  # random.randint(0, 9999999999999)
+                    while r in master.players:
+                        r = r+1  # random.randint(0, 9999999999999)
+                    self.playerId = r
+
                     self.send_message(json.dumps(
                         {"type": "stats", "dat": {"type": "yourId", "dat": self.playerId}}))
 
@@ -744,10 +783,11 @@ class Player(WebSocket):
                         master.players.append(self.playerId)
                         master.playerClasses[self.playerId] = self
 
-                        self.send_message(json.dumps(
-                            {"type": "message", "dat": "Mit UNO-Supreme Verbunden!"}))
-                        self.send_message(json.dumps(
-                            {"type": "message", "dat": "Spieler anzahl zurzeit: "+str(len(master.players))}))
+                        if not secondTime:
+                            self.send_message(json.dumps(
+                                {"type": "message", "dat": "Mit UNO-Supreme Verbunden!"}))
+                            self.send_message(json.dumps(
+                                {"type": "message", "dat": "Spieler anzahl zurzeit: "+str(len(master.players))}))
 
                         # select name
                         self.playerName = "["+str(self.playerId)+"]"
@@ -810,7 +850,7 @@ class Player(WebSocket):
         self.currentAction = ""
         print(self.address, 'connected')
 
-    def handle_close(self):
+    def handle_close(self, notReal=False):
         try:
             global master
             if self.type == "player":
@@ -834,7 +874,10 @@ class Player(WebSocket):
                     master.currentPlayer = len(master.players)-1
                     if master.currentPlayer < 0:
                         master.currentPlayer = 0
-                    master.askPlayer()
+                        master.gameEnd()
+                        print("no Players anymore!")
+                    else:
+                        master.askPlayer()
             elif self.type == "table":
                 if self in master.tables:
                     master.tables.remove(self)
@@ -843,9 +886,11 @@ class Player(WebSocket):
             elif self.type == "watcher":
                 master.watchers.remove(self)
             master.easyEvents("disconnect")
-            print(self.address, 'closed')
+            if not notReal:
+                print(self.address, 'closed')
         except:
-            print(self.address, 'closed')
+            if not notReal:
+                print(self.address, 'closed')
             traceback.print_exc()
 # start_server = websockets.serve(player, '', 8000)
 
@@ -856,4 +901,10 @@ def startWebsocket():
 
 
 def run():
-    Thread(target=startWebsocket, daemon=True) .start()
+    Thread(target=startWebsocket, daemon=True).start()
+
+
+if __name__ == "__main__":
+    run()
+    while True:
+        sleep(100)

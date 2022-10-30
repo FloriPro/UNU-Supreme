@@ -18,10 +18,11 @@
                 log_i("Fehler: Die verbindung wurde geschlossen!");
 
                 //reload button
-                var button = document.createElement("button");
-                button.innerText = "reconnect";
-                button.onclick = reconnect;
-                document.querySelector("#consoleList").prepend(button)
+                var a = document.createElement("a");
+                a.innerText = "reconnect";
+                a.href = "javascript:reconnect()";
+                a.style.color = "white";
+                document.querySelector("#consoleList").prepend(a)
             }
             ws.onopen = function (event) {
                 ws.send(JSON.stringify({ "type": "typeStatus", "dat": "console" }))
@@ -63,6 +64,12 @@
             ws.close();
             connect();
         }
+
+        setInterval(() => {
+            if (ws.readyState != ws.OPEN) {
+                reconnect();
+            }
+        }, 1000);
 
         connect();
     </script>
