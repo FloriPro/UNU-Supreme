@@ -878,6 +878,9 @@ class Player(WebSocket):
                         print("no Players anymore!")
                     else:
                         master.askPlayer()
+                if master.status == "playing" and len(master.players) <= 1:
+                    master.gameEnd()
+                    return
             elif self.type == "table":
                 if self in master.tables:
                     master.tables.remove(self)
