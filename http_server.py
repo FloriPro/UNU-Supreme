@@ -25,13 +25,6 @@ def many():
 def wsT():
     return render_template("websocketTester.html", title='UNO Supreme', serverHost=serverHost)
 
-
-@app.route("/consoleEval", methods=["POST"])
-def runCommand():
-    global master
-    command = request.data.decode("UTF-8")
-
-
 @app.route('/console')
 def console():
     # serverHost: ${location.hostname}
@@ -51,6 +44,17 @@ def flaskServer():
 def run():
     threading.Thread(target=flaskServer, daemon=True).start()
 
+@app.after_request
+def add_header(r):
+    """
+    Add headers to both force latest IE rendering engine or Chrome Frame,
+    and also to cache the rendered page for 10 minutes.
+    """
+    r.headers["Cache-Control"] = "max-age=604800"
+    #r.headers["Pragma"] = "no-cache"
+    r.headers["Expires"] = "9999"
+    r.headers['Cache-Control'] = 'public, max-age=9999'
+    return r
 
 if __name__ == "__main__":
     run()
