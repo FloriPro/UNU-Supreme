@@ -33,7 +33,9 @@ function connect() {
     currentPlayer = -1;
 
     ws.onopen = function (event) {
-        ws.send(JSON.stringify({ "type": "allCards" }));
+        if (!secondTime) {
+            ws.send(JSON.stringify({ "type": "allCards" }));
+        }
         var isSecondTime = "false";
         if (secondTime) {
             isSecondTime = "secondTime";
@@ -392,23 +394,41 @@ function connect() {
     }
 }
 
+let preloadCard = 0;
+let preloadedCard = 0;
 async function loadCardImages(cards) {
+    preloadCard = cards.length;
+    document.querySelector("#preloadIMG").style.display = "flex";
+    document.querySelector("#preloadIMGText").innerText = "Preloading Images 0/" + preloadCard;
     for (var x of cards) {
         loadCardImage(x);
     }
 }
-async function loadCardImage(x) {
+async function loadCardImage(x, i) {
+    if (i == undefined) { i = 0; }
+    if (i >= 10) { console.error("could not load img " + x) }
+
     if (cardImages[x] != undefined) { return; }
     var p = new Promise(async (resolve, reject) => {
         var reader = new FileReader();
         reader.onload = async () => {
-            resolve(reader.result)
+            resolve(reader.result);
         }
-        reader.readAsDataURL(await (await fetch("/static/cards/" + x + ".png")).blob());
+        try {
+            reader.readAsDataURL(await (await fetch("/static/cards/" + x + ".png")).blob());
+        } catch {
+            await new Promise((resolve) => { setTimeout(resolve, 100) });
+            console.log("retrying " + x)
+            loadCardImage(x, i + 1);
+        }
     });
     var out = await p;
     cardImages[x] = out;
-    //TODO hide preloadIMG
+    preloadedCard++;
+    document.querySelector("#preloadIMGText").innerText = "Preloading Images " + preloadedCard + "/" + preloadCard;
+    if (preloadCard == preloadedCard) {
+        document.querySelector("#preloadIMG").style.display = "none";
+    }
 }
 
 function genCombiTeller(cards) {

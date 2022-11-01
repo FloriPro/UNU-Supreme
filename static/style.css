@@ -133,3 +133,100 @@ body {
     color: rgb(255, 255, 255);
     transition: 1s;
 }
+
+
+
+/* Loading animation */
+/* 10015.io */
+.colorful {
+    width: 140.8px;
+    height: 70.4px;
+    --c: linear-gradient(#474bff 25%, #ff6761 0 50%, #ffd82e 0 75%, #474bff 0);
+    background: var(--c), var(--c), var(--c), var(--c);
+    background-size: 26% 400%;
+    background-position: 0% 100%, 33.33% 100%, 66.66% 100%, 100% 100%;
+    background-repeat: no-repeat;
+    animation: colorful-8jjq4v 5.0s infinite;
+}
+
+@keyframes colorful-8jjq4v {
+    0% {
+        background-position: 0% 100%, 33.33% 100%, 66.66% 100%, 100% 100%;
+    }
+
+    8.33% {
+        background-position: 0% 66.66%, 33.33% 100%, 66.66% 100%, 100% 100%;
+    }
+
+    16.67% {
+        background-position: 0% 66.66%, 33.33% 66.66%, 66.66% 100%, 100% 100%;
+    }
+
+    25% {
+        background-position: 0% 66.66%, 33.33% 66.66%, 66.66% 66.66%, 100% 100%;
+    }
+
+    30%,
+    33.33% {
+        background-position: 0% 66.66%, 33.33% 66.66%, 66.66% 66.66%, 100% 66.66%;
+    }
+
+    41.67% {
+        background-position: 0% 33.33%, 33.33% 66.66%, 66.66% 66.66%, 100% 66.66%;
+    }
+
+    50% {
+        background-position: 0% 33.33%, 33.33% 33.33%, 66.66% 66.66%, 100% 66.66%;
+    }
+
+    58.33% {
+        background-position: 0% 33.33%, 33.33% 33.33%, 66.66% 33.33%, 100% 66.66%;
+    }
+
+    63%,
+    66.67% {
+        background-position: 0% 33.33%, 33.33% 33.33%, 66.66% 33.33%, 100% 33.33%;
+    }
+
+    75% {
+        background-position: 0% 0%, 33.33% 33.33%, 66.66% 33.33%, 100% 33.33%;
+    }
+
+    83.33% {
+        background-position: 0% 0%, 33.33% 0%, 66.66% 33.33%, 100% 33.33%;
+    }
+
+    91.67% {
+        background-position: 0% 0%, 33.33% 0%, 66.66% 0%, 100% 33.33%;
+    }
+
+    97%,
+    100% {
+        background-position: 0% 0%, 33.33% 0%, 66.66% 0%, 100% 0%;
+    }
+}
+
+.progress {
+    height: 4px;
+    width: 100%;
+    background: linear-gradient(#474bff 0 0),
+        linear-gradient(#474bff 0 0),
+        #dbdcef;
+    background-size: 60% 100%;
+    background-repeat: no-repeat;
+    animation: progress-7x9cg2 3s infinite;
+ }
+ 
+ @keyframes progress-7x9cg2 {
+    0% {
+       background-position: -150% 0,-150% 0;
+    }
+ 
+    66% {
+       background-position: 250% 0,-150% 0;
+    }
+ 
+    100% {
+       background-position: 250% 0, 250% 0;
+    }
+ }
