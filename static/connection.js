@@ -1,6 +1,8 @@
 const rot = 40;
 const colors = ["red", "green", "blue", "yellow"];
-const workingCombis = ["aussetzen", "richtungswechsel", "komunist"];
+const windowsCombos = ["aussetzen", "richtungswechsel", "komunist"];
+const otherCombos = [["9", "6"], ["0", "2", "4"]]
+
 let wantsType = "player";
 
 /**
@@ -13,6 +15,9 @@ let cardImages = {};
  */
 let currentlyClicked = undefined;
 let secondTime = false;
+/**
+ * @type {WebSocket}
+ */
 let ws;
 let playerStatus;
 let playerId;
@@ -87,12 +92,12 @@ function connect() {
                     div2.className = "playerCards"
                     div2.id = "playerCards_" + x;
 
-                    var p = document.createElement("p");
-                    p.innerText = name;
-                    p.style.marginBottom = "0px";
-                    p.style.marginTop = "0px";
+                    var button = document.createElement("p");
+                    button.innerText = name;
+                    button.style.marginBottom = "0px";
+                    button.style.marginTop = "0px";
 
-                    div.append(p);
+                    div.append(button);
                     div.append(div2);
 
                     document.querySelector("#playerList").append(div);
@@ -180,22 +185,22 @@ function connect() {
             if (data["dat"]["type"] == "deck") {
                 document.querySelector("#deck").innerHTML = "";
                 for (var x of data["dat"]["dat"]) {
-                    var p = getCard(x);
+                    var button = getCard(x);
 
                     //var img = document.createElement("img")
                     //img.src = "/static/cards/" + x + ".png"
                     //img.onerror = (event) => {
                     //    event.srcElement.style.background = "aqua";
                     //}
-                    p.onclick = (event) => {
-                        layCard(event.target.alt, p);
+                    button.onclick = (event) => {
+                        layCard(event.target.alt, button);
                     }
-                    p.className = "ownDeck"
+                    button.className = "ownDeck"
                     //img.alt = x
                     //img.width = "86";
                     //img.height = "129";
 
-                    document.querySelector("#deck").append(p)
+                    document.querySelector("#deck").append(button)
                 }
                 updateCombinations();
                 return;
@@ -205,11 +210,11 @@ function connect() {
             if (data["dat"]["type"] == "lyingCards") {
                 document.querySelector("#stapel").innerHTML = "";
                 for (var card of data["dat"]["dat"]) {
-                    var p = getCard(card);
+                    var button = getCard(card);
                     //var img = document.createElement("img")
                     //img.src = "/static/cards/" + card + ".png";
-                    p.className = "stapelCard";
-                    p.style.position = "absolute";
+                    button.className = "stapelCard";
+                    button.style.position = "absolute";
                     //img.onerror = (event) => {
                     //    event.srcElement.style.background = "aqua";
                     //}
@@ -218,9 +223,9 @@ function connect() {
                     //img.height = "129";
 
                     var a = Math.random() * rot * 2 - rot;
-                    p.style.transform = "rotate(" + a + "deg)"
+                    button.style.transform = "rotate(" + a + "deg)"
 
-                    document.querySelector("#stapel").append(p)
+                    document.querySelector("#stapel").append(button)
                 }
                 return;
             }
@@ -247,11 +252,11 @@ function connect() {
 
                 for (var c of cards) {
                     if (c.alt != "remove" && c.alt.endsWith("2+")) {
-                        var p = getCard(c.alt)
-                        p.onclick = (event) => {
+                        var button = getCard(c.alt)
+                        button.onclick = (event) => {
                             layCard(event.target.alt);
                         }
-                        document.querySelector("#twoxinputPositions").append(p);
+                        document.querySelector("#twoxinputPositions").append(button);
                     }
                 }
                 return;
@@ -260,11 +265,11 @@ function connect() {
             else if (data["dat"]["type"] == "lyingCards") {
                 var card = data["dat"]["dat"];
 
-                var p = getCard(card);
+                var button = getCard(card);
                 //var img = document.createElement("img")
                 //img.src = "/static/cards/" + card + ".png";
-                p.className = "stapelCard";
-                p.style.position = "absolute";
+                button.className = "stapelCard";
+                button.style.position = "absolute";
                 //img.onerror = (event) => {
                 //    event.srcElement.style.background = "aqua";
                 //}
@@ -273,9 +278,9 @@ function connect() {
                 //img.height = "129";
 
                 var a = Math.random() * rot * 2 - rot;
-                p.style.transform = "rotate(" + a + "deg)"
+                button.style.transform = "rotate(" + a + "deg)"
 
-                document.querySelector("#stapel").append(p)
+                document.querySelector("#stapel").append(button)
                 return;
             }
             else if (data["dat"] == "removeCard") {
@@ -293,13 +298,13 @@ function connect() {
             else if (data["dat"]["type"] == "addCard") {
                 var x = data["dat"]["dat"];
 
-                var p = getCard(x);
-                p.onclick = (event) => {
-                    layCard(event.target.alt, p);
+                var button = getCard(x);
+                button.onclick = (event) => {
+                    layCard(event.target.alt, button);
                 }
-                p.className = "ownDeck"
+                button.className = "ownDeck"
 
-                document.querySelector("#deck").append(p);
+                document.querySelector("#deck").append(button);
                 updateCombinations();
                 return;
             }
@@ -352,6 +357,26 @@ function connect() {
                 li.innerText = data["dat"]["dat"];
                 document.querySelector("#wonPlayers").append(li);
                 return;
+            }
+            else if (data["dat"]["type"] == "specificSelect") {
+                document.querySelector("#specificSelect").style.display = "flex";
+                document.querySelector("#specificSelectHolder").innerHTML = "";
+
+                var h = document.createElement("h1");
+                h.innerText = data["dat"]["dat"]["title"]
+                document.querySelector("#specificSelectHolder").append(h)
+
+                for (var x of Object.keys(data["dat"]["dat"]["options"])) {
+                    var button = document.createElement("button");
+                    button.innerText = x;
+                    button.onclick = () => { ws.send(JSON.stringify({ "type": "selectResponse", "dat": data["dat"]["dat"]["options"][x] })) }
+                    document.querySelector("#specificSelectHolder").append(button)
+                }
+                return;
+            }
+            else if (data["dat"] == "closeSpecificSelect") {
+                document.querySelector("#specificSelect").style.display = "none";
+                document.querySelector("#specificSelectHolder").innerHTML = "";
             }
         }
         else if (data["type"] == "status") {
@@ -444,50 +469,75 @@ function genCombiTeller(cards) {
         div.append(img);
     }
 
+    div.onclick = () => {
+        ws.send(JSON.stringify({ "type": "lay_card", "dat": cards }))
+    }
+
     return div;
+}
+/**
+ * 
+ * @param {string} card 
+ * @param {string} color 
+ * @param {Array<HTMLImageElement>} allCards 
+ */
+function cardExists(card, color, allCards) {
+    for (var x of allCards) {
+        if (x.alt == color + "_" + card) {
+            return true;
+        }
+    }
+    return false;
 }
 
 function updateCombinations() {
+    var cards = document.querySelectorAll(".ownDeck:not(.remove)");
     ///////////////////////////////
     //          WINDOWS          //
     //gleiche karte, alle Farben //
     ///////////////////////////////
 
-    //gen combis
-    var all = [];
-    var tested = []
     var combinations = [];
-    for (var x of document.querySelectorAll(".ownDeck:not(.remove)")) {
-        all.push(x.alt.split("_")); // ["green", "komunist"]
+
+    //windowsCombos
+    for (var x of windowsCombos) {
+        var e = true;
+        for (var y of ["red", "green", "blue", "yellow"]) {
+            if (!cardExists(x, y, cards)) {
+                e = false;
+            }
+        }
+
+        if (e == true) {
+            combinations.push(["red_" + x, "green_" + x, "blue_" + x, "yellow_" + x]);
+        }
     }
-    for (var x of all) {
-        if (!tested.includes(x[1])) {
-            var availableColors = [];
-            for (var i of all) {
-                if (i[1] == x[1]) {
-                    if (!availableColors.includes(i[0])) {
-                        availableColors.push(i[0]);
-                    }
+
+    //otherCombos
+    for (var x of otherCombos) {
+        for (var z of ["red", "green", "blue", "yellow"]) {
+            var e = true;
+            for (var y of x) {
+                if (!cardExists(y, z, cards)) {
+                    e = false;
                 }
             }
 
-            if (availableColors.length == 4) {
-                //can work
-                combinations.push(x[1]);
-            }
+            if (e == true) {
+                var t = []
+                for (var y of x.reverse()) {
+                    t.push([z + "_" + y])
+                }
 
-            tested.push(x[1]);
+                combinations.push(t);
+            }
         }
     }
 
     //show them with no animation
     document.querySelector("#combinations").innerHTML = "";
     for (var x of combinations) {
-        if (workingCombis.includes(x)) {
-            document.querySelector("#combinations").append(genCombiTeller(["red_" + x, "green_" + x, "blue_" + x, "yellow_" + x]));
-        } else {
-            document.querySelector("#combinations").append(genCombiTeller(["red_" + x, "green_" + x, "blue_" + x, "yellow_" + x]));
-        }
+        document.querySelector("#combinations").append(genCombiTeller(x));
     }
 
 
@@ -502,6 +552,9 @@ function reconnect() {
     document.querySelector("#wonPlayersBody").style.display = "none";
     document.querySelector("#deck").innerHTML = "";
     document.querySelector("#stapel").innerHTML = "";
+    document.querySelector("#combinations").innerHTML = "";
+    document.querySelector("#specificSelect").style.display = "none";
+    document.querySelector("#specificSelectHolder").innerHTML = "";
 
     playerStatus = "reconnect";
     ws.onclose = () => { };

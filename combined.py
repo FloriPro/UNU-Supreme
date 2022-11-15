@@ -1,4 +1,6 @@
+import os
 import json
+from simple_websocket.ws import ConnectionClosed
 from math import ceil
 from random import randint
 import random
@@ -14,8 +16,13 @@ sock = Sock(app)
 app.config['TEMPLATES_AUTO_RELOAD'] = True
 app.jinja_env.auto_reload = True
 app.config.from_object(__name__)
+if os.path.isdir("/home/runner") == True:
+    # on replit
+    serverHost = "wss://${location.hostname}/sock"  # ${location.hostname}
+else:
+    # not on replit
+    serverHost = "ws://${location.hostname}/sock"  # ${location.hostname}
 
-serverHost = "wss://${location.hostname}/sock"  # ${location.hostname}
 
 cards = {
     "red": {
@@ -251,6 +258,45 @@ class gameMaster:
             }))
         self.playerClasses[playerId].handle_close(True)
 
+    def isThisCombo(self, cards, comboCards, playerId, specificColour=False):
+        if len(comboCards) != len(cards):
+            return False
+        for x in range(len(cards)):
+            if specificColour:
+                if cards[x] not in comboCards:
+                    return False
+                comboCards.remove(cards[x])
+            else:
+                if cards[x].split("_")[0] not in comboCards.split("_")[0]:
+                    return False
+                # remove one crad that has the same type ignoring color
+                i = 0
+                while True:
+                    if comboCards[i].split("_")[0] == cards[x].split("_")[0]:
+                        comboCards.remove(comboCards[i])
+                        break
+                    i += 1
+
+        for x in cards:
+            if specificColour:
+                self.easyEvents("cardAdd", x)
+                self.addCard(x)
+                self.playerDeck[playerId].remove(x)
+            else:
+                i = 0
+                while True:
+                    if self.playerDeck[playerId][i].split("_")[0] == x.split("_")[0]:
+                        self.easyEvents(
+                            "cardAdd", self.playerDeck[playerId][i])
+                        self.addCard(self.playerDeck[playerId][i])
+                        self.playerDeck[playerId].remove(
+                            self.playerDeck[playerId][i])
+                        break
+                    i += 1
+                pass
+            sleep(0.1)
+        return True
+
     def layCard(self, card, playerId):
         if playerId != self.players[self.currentPlayer]:
             self.playerClasses[playerId].send_message(
@@ -346,11 +392,57 @@ class gameMaster:
                         }
                     })
         else:
-            self.playerClasses[playerId].send_message(
-                json.dumps({
-                    "type": "message",
-                    "dat": "Karten-combos zurzeit nicht verfügbar!"
-                }))
+            # check if has card
+            for x in card:
+                if x not in self.playerDeck[playerId]:
+                    self.playerClasses[playerId].send_message(
+                        json.dumps({
+                            "type": "message",
+                            "dat": "Fehler! Du besitzt mindestens eine dieser Karten nicht!"
+                        }))
+                    return
+            if self.isThisCombo(card, ["yellow_richtungswechsel", "blue_richtungswechsel", "green_richtungswechsel", "red_richtungswechsel"], playerId, specificColour=True):
+                if len(self.playerDeck[playerId]) == 0:
+                    self.playerWin(playerId)
+                    return
+                self.playerClasses[playerId].currentAction = "specificSelect_winRichtungswechsel"
+
+                allPlayers = {}
+                for x in self.players:
+                    if x != playerId:
+                        allPlayers[self.playerNames[x]] = x
+                self.playerClasses[playerId].send_message(
+                    json.dumps({
+                        "type": "action",
+                        "dat": {
+                            "type": "specificSelect",
+                            "dat": {
+                                "title": "Mit welchem spieler willst du tauschen?",
+                                "options": allPlayers
+                            }
+                        }
+                    })
+                )
+                self.playerClasses[playerId].send_message(
+                    json.dumps({
+                        "type": "message",
+                        "dat": "Karten-combo gelegt"
+                    }))
+            else:
+                self.playerClasses[playerId].send_message(
+                    json.dumps({
+                        "type": "message",
+                        "dat": "Karten-combos nicht verfügbar!"
+                    }))
+
+            master.addEvent(
+                playerId, {
+                    "type": "stats",
+                    "dat": {
+                        "type": "deck",
+                        "dat": master.playerDeck[playerId]
+                    }
+                })
 
     def messageAll(self, msg):
         if len(self.tables) > 0:
@@ -628,10 +720,8 @@ class gameMaster:
             if not has:
                 self.playerClasses[playerId].send_message(
                     json.dumps({
-                        "type":
-                        "message",
-                        "dat":
-                        "Da du keine Karten legen kannst wurde der nächste Spieler aufgerufen."
+                        "type": "message",
+                        "dat": "Da du keine Karten legen kannst wurde der nächste Spieler aufgerufen."
                     }))
                 self.nextPlayer()
             else:
@@ -795,11 +885,17 @@ class Player:
         self.type = ""
         self.currentAction = ""
         self.client = client
-        self.address = idet
+        self.idet = idet
 
     def send_message(self, dat):
-        if self.client.clients[self.address].connected:
-            self.client.clients[self.address].send(dat)
+        try:
+            if self.idet in self.client.clients:
+                if self.client.clients[self.idet].connected:
+                    self.client.clients[self.idet].send(dat)
+            else:
+                self.client.close_connection(self.idet)
+        except ConnectionClosed:
+            self.client.close_connection(self.idet)
 
     def handle(self, data):
         try:
@@ -826,8 +922,43 @@ class Player:
                         }
                     }))
 
-            elif self.currentAction == "get_name" and data[
-                    "type"] == "get_name":
+            elif self.currentAction.startswith("specificSelect_") and data["type"] == "selectResponse":
+                if self.currentAction == "specificSelect_winRichtungswechsel":
+                    if data["dat"] in master.players:
+                        p = master.playerDeck[self.playerId]
+                        master.playerDeck[self.playerId] = master.playerDeck[data["dat"]]
+                        master.playerDeck[data["dat"]] = p
+
+                        master.easyEvents("playerCardCount")
+                        master.addEvent(
+                            data["dat"], {
+                                "type": "stats",
+                                "dat": {
+                                    "type": "deck",
+                                    "dat": master.playerDeck[data["dat"]]
+                                }
+                            })
+                        master.addEvent(
+                            self.playerId, {
+                                "type": "stats",
+                                "dat": {
+                                    "type": "deck",
+                                    "dat": master.playerDeck[self.playerId]
+                                }
+                            })
+
+                        self.send_message(json.dumps(
+                            {"type": "message", "dat": "Karten getauscht"}))
+                        master.addEvent(
+                            data["dat"], {"type": "message", "dat": master.playerNames[self.playerId]+" hat deine Karten getauscht"})
+                        master.nextPlayer()
+                    else:
+                        self.send_message(json.dumps(
+                            {"type": "message", "dat": "Dieser Spieler existiert nicht!"}))
+                        return
+                self.send_message(json.dumps(
+                    {"type": "action", "dat": "closeSpecificSelect"}))
+            elif self.currentAction == "get_name" and data["type"] == "get_name":
                 if (data["dat"] != ""
                         and data["dat"] not in master.playerNames.values()):
                     self.playerName = data["dat"]
@@ -1006,7 +1137,7 @@ class Player:
             traceback.print_exc()
 
     def connected(self):
-        print(self.address, 'connected')
+        print(self.idet, 'connected')
 
     def handle_close(self, notReal=False):
         try:
@@ -1049,10 +1180,10 @@ class Player:
                 master.watchers.remove(self)
             master.easyEvents("disconnect")
             if not notReal:
-                print(self.address, 'closed')
+                print(self.idet, 'closed')
         except:
             if not notReal:
-                print(self.address, 'closed')
+                print(self.idet, 'closed')
             traceback.print_exc()
 
 
@@ -1221,13 +1352,17 @@ class Client():
             while self.clients[idet].connected:
                 #print("Is connected")
                 sleep(1)
-            self.rec[idet].handle_close()
             self.close_connection(idet)
         except Exception as e:
+            print("chekc disconnected errored")
             print(e)
+
     def close_connection(self, idet):
-        self.clients.pop(idet)
-        self.rec.pop(idet)
+        if idet in self.rec.keys():
+            self.rec[idet].handle_close()
+            self.rec.pop(idet)
+        if idet in self.clients.keys():
+            self.clients.pop(idet)
 
 
 client = Client()
