@@ -1,4 +1,4 @@
-let ws = new WebSocket(`ws://${serverHost}:8000/`);
+let ws = new WebSocket(serverHost);
 const maxCardRotation = 10;
 
 let typ = "normal";

@@ -18,8 +18,9 @@ let playerStatus;
 let playerId;
 let currentPlayer;
 let hasTable = false;
+//addMessage("ok");
 function connect() {
-    ws = new WebSocket(`ws://${serverHost}:8000/`);
+    ws = new WebSocket(serverHost);
     ws.onclose = function (event) {
         if (playerStatus == "reconnect") { return; }
         console.error(event);

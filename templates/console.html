@@ -12,7 +12,7 @@
          */
         let ws;
         function connect() {
-            ws = new WebSocket(`ws://${serverHost}:8000/`);
+            ws = new WebSocket(serverHost);
             ws.onclose = function (event) {
                 console.error(event);
                 log_i("Fehler: Die verbindung wurde geschlossen!");

@@ -1,11 +1,22 @@
-from math import ceil
-from threading import Thread
-from time import sleep
-from simple_websocket_server import WebSocketServer, WebSocket
-import traceback
-import threading
-import random
 import json
+from math import ceil
+from random import randint
+import random
+import threading
+from time import sleep
+import traceback
+from flask import Flask, render_template, request
+from flask_sock import Sock
+from threading import Timer, Thread
+
+
+app = Flask(__name__)
+sock = Sock(app)
+app.config['TEMPLATES_AUTO_RELOAD'] = True
+app.jinja_env.auto_reload = True
+app.config.from_object(__name__)
+
+serverHost = "ws://${location.hostname}/sock"  # ${location.hostname}
 
 
 cards = {"red":    {2: ["2+", "aussetzen", "richtungswechsel", "1", "2", "3", "4", "5", "6", "7", "8", "9",
@@ -627,86 +638,20 @@ class gameMaster:
 master = gameMaster()
 
 
-def genPlayerId(inp):
-    global master
-    inp = str(inp)
+class Player:
+    def __init__(self, client, idet) -> None:
+        self.type = ""
+        self.currentAction = ""
+        self.client = client
+        self.address = idet
 
-    if (inp.startswith("{")):
-        inp = master.players[int(inp[1:-1])]
+    def send_message(self, dat):
+        self.client.clients[self.address].send(dat)
 
-    return int(inp)
-
-
-def consoleEval(dat):
-    global master
-    command = dat.split(" ")
-    try:
-        if command[0] == "players":
-            returnDat = []
-            for player in master.players:
-                if player in master.playerNames.keys():
-                    name = master.playerNames[player]
-                else:
-                    name = "undefined"
-                returnDat.append(name+": "+str(player))
-                pass
-            return ",\n".join(returnDat)
-        elif command[0] == "give":
-            playerId = genPlayerId(command[2])
-            if playerId not in master.playerDeck.keys():
-                return "player doesn't exist"
-            master.playerDeck[playerId].append(command[1])
-            master.addEvent(playerId,
-                            {"type": "action", "dat": {
-                                "type": "addCard",
-                                "dat": command[1]
-
-                            }})
-            master.easyEvents("playerCardCount")
-            return "ok!"
-        elif command[0] == "get":
-            playerId = genPlayerId(command[1])
-            if playerId in master.playerDeck:
-                cards = ", ".join(master.playerDeck[playerId])
-            else:
-                cards = "player does not exist!"
-            return cards
-        elif command[0] == "setCurrentPlayer":
-            playerId = genPlayerId(command[1])
-            master.currentPlayer = playerId
-            return "set to " + str(master.currentPlayer)
-        elif command[0] == "getCurrentPlayer":
-            return "CurrentPlayer: " + str(master.currentPlayer)
-        elif command[0] == "win":
-            playerId = genPlayerId(command[1])
-            master.easyEvents("playerCardCount")
-            master.addEvent(playerId, {"type": "stats",
-                                       "dat": {
-                                           "type": "deck",
-                                           "dat": []
-                                       }})
-
-            master.playerWin(playerId)
-            master.nextPlayer()
-
-            return f"player {playerId} has now finished!"
-        elif command[0] == "start":
-            master.start()
-            return "started"
-        elif command[0] == "nextPlayer":
-            master.nextPlayer()
-            return "ok"
-    except Exception as e:
-        return traceback.format_exc()
-        # return "error: " + str(e)
-    return "command did not return! Does it realy exist?"
-
-
-class Player(WebSocket):
-    def handle(self):
+    def handle(self, data):
         try:
             global master
-            data = json.loads(self.data)
+            data = json.loads(data)
             # print(self.data)
 
             if data["type"] == "start_game":
@@ -844,8 +789,6 @@ class Player(WebSocket):
             traceback.print_exc()
 
     def connected(self):
-        self.type = ""
-        self.currentAction = ""
         print(self.address, 'connected')
 
     def handle_close(self, notReal=False):
@@ -893,16 +836,179 @@ class Player(WebSocket):
             if not notReal:
                 print(self.address, 'closed')
             traceback.print_exc()
-# start_server = websockets.serve(player, '', 8000)
 
 
-def startWebsocket():
-    server = WebSocketServer('0.0.0.0', 8000, Player)
-    server.serve_forever()
+def genPlayerId(inp):
+    global master
+    inp = str(inp)
+
+    if (inp.startswith("{")):
+        inp = master.players[int(inp[1:-1])]
+
+    return int(inp)
+
+
+def consoleEval(dat):
+    global master
+    command = dat.split(" ")
+    try:
+        if command[0] == "players":
+            returnDat = []
+            for player in master.players:
+                if player in master.playerNames.keys():
+                    name = master.playerNames[player]
+                else:
+                    name = "undefined"
+                returnDat.append(name+": "+str(player))
+                pass
+            return ",\n".join(returnDat)
+        elif command[0] == "give":
+            playerId = genPlayerId(command[2])
+            if playerId not in master.playerDeck.keys():
+                return "player doesn't exist"
+            master.playerDeck[playerId].append(command[1])
+            master.addEvent(playerId,
+                            {"type": "action", "dat": {
+                                "type": "addCard",
+                                "dat": command[1]
+
+                            }})
+            master.easyEvents("playerCardCount")
+            return "ok!"
+        elif command[0] == "get":
+            playerId = genPlayerId(command[1])
+            if playerId in master.playerDeck:
+                cards = ", ".join(master.playerDeck[playerId])
+            else:
+                cards = "player does not exist!"
+            return cards
+        elif command[0] == "setCurrentPlayer":
+            playerId = genPlayerId(command[1])
+            master.currentPlayer = playerId
+            return "set to " + str(master.currentPlayer)
+        elif command[0] == "getCurrentPlayer":
+            return "CurrentPlayer: " + str(master.currentPlayer)
+        elif command[0] == "win":
+            playerId = genPlayerId(command[1])
+            master.easyEvents("playerCardCount")
+            master.addEvent(playerId, {"type": "stats",
+                                       "dat": {
+                                           "type": "deck",
+                                           "dat": []
+                                       }})
+
+            master.playerWin(playerId)
+            master.nextPlayer()
+
+            return f"player {playerId} has now finished!"
+        elif command[0] == "start":
+            master.start()
+            return "started"
+        elif command[0] == "nextPlayer":
+            master.nextPlayer()
+            return "ok"
+    except Exception as e:
+        return traceback.format_exc()
+        # return "error: " + str(e)
+    return "command did not return! Does it realy exist?"
+
+
+@app.route('/')
+def projects():
+    return render_template("index.html", title='UNO Supreme', serverHost=serverHost)
+
+
+@app.route('/many')
+def many():
+    return render_template("many.html", title='UNO Supreme', serverHost=serverHost)
+
+
+@app.route('/wsT')
+def wsT():
+    return render_template("websocketTester.html", title='UNO Supreme', serverHost=serverHost)
+
+
+@app.route('/console')
+def console():
+    # serverHost: ${location.hostname}
+    return render_template("console.html", title='Debug console', serverHost=serverHost)
+
+
+@app.route("/table")
+def desk():
+    # serverHost: ${location.hostname}
+    return render_template("table.html", title="Table Stuff", serverHost=serverHost)
+
+
+def flaskServer():
+    app.run("0.0.0.0", 80)
 
 
 def run():
-    Thread(target=startWebsocket, daemon=True).start()
+    threading.Thread(target=flaskServer, daemon=True).start()
+
+
+@app.after_request
+def add_header(r):
+    """
+    Add headers to both force latest IE rendering engine or Chrome Frame,
+    and also to cache the rendered page for 10 minutes.
+    """
+    r.headers["Cache-Control"] = "max-age=604800"
+    #r.headers["Pragma"] = "no-cache"
+    r.headers["Expires"] = "9999"
+    r.headers['Cache-Control'] = 'public, max-age=9999'
+    return r
+
+
+class Client():
+    def __init__(self):
+        self.clients = {}
+        self.rec = {}
+
+    def add_client(self, ws):
+        idet = randint(0, 100000)
+        self.clients[idet] = ws
+        self.rec[idet] = Player(self, idet)
+        #Timer(10, self.close_connection, (ws,)).start()
+        Thread(target=self.check_disconnect, args=(idet,)).start()
+        return idet
+
+    def run(self, idet):
+        data = self.clients[idet].receive()
+        self.rec[idet].handle(data)
+
+    def active_client(self, idet):
+        if idet in self.clients.keys():
+            return True
+        print("not active_client")
+        return False
+
+    def check_disconnect(self, idet):
+        try:
+            while self.clients[idet].connected:
+                #print("Is connected")
+                sleep(5)
+            self.rec[idet].handle_close()
+            print("Socket Closed forever")
+        except Exception as e:
+            print(e)
+
+    def close_connection(self, idet):
+        self.clients.remove(self.clients[idet])
+        self.rec.remove(self.rec[idet])
+
+
+client = Client()
+
+
+@sock.route('/sock')
+def echo(ws):
+    idet = client.add_client(ws)
+    while client.active_client(idet):
+        client.run(idet)
+    ws.close(1006, "Invalid Message")
+    print("Client disconnected")
 
 
 if __name__ == "__main__":

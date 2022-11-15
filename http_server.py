@@ -8,7 +8,7 @@ app.config['TEMPLATES_AUTO_RELOAD'] = True
 app.jinja_env.auto_reload = True
 app.config.from_object(__name__)
 
-serverHost = "${location.hostname}"  # ${location.hostname}
+serverHost = "ws://${location.hostname}:8000"  # ${location.hostname}
 
 
 @app.route('/')

@@ -8,7 +8,7 @@ class player {
         this.deck = []
         this.top = "";
 
-        this.ws = new WebSocket(`ws://${serverHost}:8000/`);
+        this.ws = new WebSocket(serverHost);
         this.ws.ws = this.ws;
         this.ws.t = this;
         this.init = false;
