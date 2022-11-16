@@ -10,7 +10,11 @@ import traceback
 from flask import Flask, render_template, request
 from flask_sock import Sock
 from threading import Timer, Thread
+import logging
 
+
+log = logging.getLogger('werkzeug')
+log.setLevel(logging.ERROR)
 app = Flask(__name__)
 sock = Sock(app)
 app.config['TEMPLATES_AUTO_RELOAD'] = True
@@ -79,6 +83,9 @@ class gameMaster:
         self.scoreboard = {}
 
         self.events = {}
+
+        self.specialAction = ""
+        self.nextPlayerEvents = []
 
         self.status = "waiting_for_players"
         self.currentPlayer = 0
@@ -165,42 +172,98 @@ class gameMaster:
                 "dat": self.currentPlayer
             }
         })
-        if self.lyingCards[-1].endswith("4+"):
-            self.drawCard(playerId)
-            self.drawCard(playerId)
-            self.drawCard(playerId)
-            self.drawCard(playerId)
-            self.playerClasses[playerId].send_message(
-                json.dumps({
-                    "type": "message",
-                    "dat": "Du Hast 4 Karten gezogen"
-                }))
-        if self.lyingCards[-1].endswith("2+"):
-            self.twoPlusAdder += 2
-            if self.playerHas2x(playerId):
-                self.addEvent(playerId, {
-                    "type": "status",
-                    "dat": "2+_Desicion"
-                })
-                self.addEvent(
-                    playerId, {
-                        "type": "action",
-                        "dat": "slect2+Card",
-                        "dat2": self.twoPlusAdder
-                    })
-            else:
-                for x in range(self.twoPlusAdder):
+        # run next Player events
+        if self.nextPlayerEvents != [] and self.specialAction == "":
+            while self.nextPlayerEvents != []:
+                if self.nextPlayerEvents[0] == "4+":
                     self.drawCard(playerId)
+                    self.drawCard(playerId)
+                    self.drawCard(playerId)
+                    self.drawCard(playerId)
+                    self.playerClasses[playerId].send_message(
+                        json.dumps({
+                            "type": "message",
+                            "dat": "Du Hast 4 Karten gezogen"
+                        }))
+                elif self.nextPlayerEvents[0] == "2+":
+                    self.twoPlusAdder += 2
+                    if self.playerHas2x(playerId):
+                        self.addEvent(playerId, {
+                            "type": "status",
+                            "dat": "2+_Desicion"
+                        })
+                        self.addEvent(
+                            playerId, {
+                                "type": "action",
+                                "dat": "slect2+Card",
+                                "dat2": self.twoPlusAdder
+                            })
+                    else:
+                        for x in range(self.twoPlusAdder):
+                            self.drawCard(playerId)
+                        self.playerClasses[playerId].send_message(
+                            json.dumps({
+                                "type":
+                                "message",
+                                "dat":
+                                "Du Hast " + str(self.twoPlusAdder) +
+                                " Karten gezogen"
+                            }))
+                        self.twoPlusAdder = 0
+                elif self.nextPlayerEvents[0] == "aussetzen":
+                    self.nextPlayerEvents = self.nextPlayerEvents[1:]
+                    self.nextPlayer()
+                    return
+                else:
+                    print("error: unknown playerEvent   : " +
+                          self.nextPlayerEvents[0])
+                self.nextPlayerEvents = self.nextPlayerEvents[1:]
+        # special cards appied to the current player (after the next player is allready selected so actually to the next player)
+        if self.lyingCards[-1].endswith("4+"):
+            if self.specialAction.startswith("winAussetzen"):
+                self.nextPlayerEvents.append("4+")
+            else:
+                self.drawCard(playerId)
+                self.drawCard(playerId)
+                self.drawCard(playerId)
+                self.drawCard(playerId)
                 self.playerClasses[playerId].send_message(
                     json.dumps({
-                        "type":
-                        "message",
-                        "dat":
-                        "Du Hast " + str(self.twoPlusAdder) + " Karten gezogen"
+                        "type": "message",
+                        "dat": "Du Hast 4 Karten gezogen"
                     }))
-                self.twoPlusAdder = 0
-                self.addEvent(playerId, {"type": "status", "dat": "slectCard"})
-                self.addEvent(playerId, {"type": "action", "dat": "slectCard"})
+        if self.lyingCards[-1].endswith("2+"):
+            if self.specialAction.startswith("winAussetzen"):
+                self.nextPlayerEvents.append("2+")
+            else:
+                self.twoPlusAdder += 2
+                if self.playerHas2x(playerId):
+                    self.addEvent(playerId, {
+                        "type": "status",
+                        "dat": "2+_Desicion"
+                    })
+                    self.addEvent(
+                        playerId, {
+                            "type": "action",
+                            "dat": "slect2+Card",
+                            "dat2": self.twoPlusAdder
+                        })
+                else:
+                    for x in range(self.twoPlusAdder):
+                        self.drawCard(playerId)
+                    self.playerClasses[playerId].send_message(
+                        json.dumps({
+                            "type":
+                            "message",
+                            "dat":
+                            "Du Hast " + str(self.twoPlusAdder) +
+                            " Karten gezogen"
+                        }))
+                    self.twoPlusAdder = 0
+                    self.addEvent(
+                        playerId, {"type": "status", "dat": "slectCard"})
+                    self.addEvent(
+                        playerId, {"type": "action", "dat": "slectCard"})
         else:
             self.twoPlusAdder = 0
             self.addEvent(playerId, {"type": "status", "dat": "slectCard"})
@@ -258,7 +321,7 @@ class gameMaster:
             }))
         self.playerClasses[playerId].handle_close(True)
 
-    def isThisCombo(self, cards, comboCards, playerId, specificColour=False):
+    def isThisCombo(self, cards, comboCards, playerId, specificColour=False, topCardColor="green"):
         if len(comboCards) != len(cards):
             return False
         for x in range(len(cards)):
@@ -277,11 +340,17 @@ class gameMaster:
                         break
                     i += 1
 
+        coulourCard = ""
+        if specificColour:
+            for x in cards:
+                if x.split("_")[0] == topCardColor:
+                    coulourCard = x
         for x in cards:
             if specificColour:
-                self.easyEvents("cardAdd", x)
-                self.addCard(x)
-                self.playerDeck[playerId].remove(x)
+                if x != coulourCard:
+                    self.easyEvents("cardAdd", x)
+                    self.addCard(x)
+                    self.playerDeck[playerId].remove(x)
             else:
                 i = 0
                 while True:
@@ -295,9 +364,13 @@ class gameMaster:
                     i += 1
                 pass
             sleep(0.1)
+        if specificColour:
+            self.easyEvents("cardAdd", coulourCard)
+            self.addCard(coulourCard)
+            self.playerDeck[playerId].remove(coulourCard)
         return True
 
-    def layCard(self, card, playerId):
+    def layCard(self, card, playerId, topCardColor=None):
         if playerId != self.players[self.currentPlayer]:
             self.playerClasses[playerId].send_message(
                 json.dumps({
@@ -367,7 +440,12 @@ class gameMaster:
                             self.playerWin(playerId)
 
                         if (card[0].endswith("_aussetzen")):
-                            self.nextPlayer(2)
+                            if not self.specialAction.startswith("winAussetzen"):
+                                self.nextPlayer(2)
+                            else:
+                                self.nextPlayerEvents.append("aussetzen")
+                        elif (card[0].endswith("_richtungswechsel")):
+                            self.askPlayer()
                         else:
                             self.nextPlayer()
 
@@ -401,7 +479,8 @@ class gameMaster:
                             "dat": "Fehler! Du besitzt mindestens eine dieser Karten nicht!"
                         }))
                     return
-            if self.isThisCombo(card, ["yellow_richtungswechsel", "blue_richtungswechsel", "green_richtungswechsel", "red_richtungswechsel"], playerId, specificColour=True):
+
+            if self.isThisCombo(card, ["yellow_richtungswechsel", "blue_richtungswechsel", "green_richtungswechsel", "red_richtungswechsel"], playerId, True, topCardColor):
                 if len(self.playerDeck[playerId]) == 0:
                     self.playerWin(playerId)
                     return
@@ -411,6 +490,9 @@ class gameMaster:
                 for x in self.players:
                     if x != playerId:
                         allPlayers[self.playerNames[x]] = x
+                if len(allPlayers) == 0:
+                    self.playerWin(playerId)
+                    return
                 self.playerClasses[playerId].send_message(
                     json.dumps({
                         "type": "action",
@@ -428,11 +510,28 @@ class gameMaster:
                         "type": "message",
                         "dat": "Karten-combo gelegt"
                     }))
+            elif (not self.specialAction.startswith("winAussetzen")) and self.isThisCombo(card, ["yellow_aussetzen", "blue_aussetzen", "green_aussetzen", "red_aussetzen"], playerId, True, topCardColor):
+                if len(self.playerDeck[playerId]) == 0:
+                    self.playerWin(playerId)
+                    return
+                self.specialAction = "winAussetzen_4"
+                self.playerClasses[playerId].send_message(
+                    json.dumps({
+                        "type": "message",
+                        "dat": "Karten-combo gelegt du kannst nun 4 mal Karten hintereinander legen"
+                    }))
+                self.nextPlayer()
+            elif self.specialAction.startswith("winAussetzen"):
+                self.playerClasses[playerId].send_message(
+                    json.dumps({
+                        "type": "message",
+                        "dat": "Windows-aussetzen-combo kann nicht addiert/kombiniert werden"
+                    }))
             else:
                 self.playerClasses[playerId].send_message(
                     json.dumps({
                         "type": "message",
-                        "dat": "Karten-combos nicht verfügbar!"
+                        "dat": "Karten-combo zurzeit nicht verfügbar!"
                     }))
 
             master.addEvent(
@@ -519,6 +618,13 @@ class gameMaster:
                     "dat": "Du bist zurzeit nicht am zug!"
                 }))
 
+    def nextPlayerWithoutAsking(self):
+        self.currentPlayer += self.direction
+        if self.currentPlayer >= len(self.players):
+            self.currentPlayer = 0
+        if self.currentPlayer < 0:
+            self.currentPlayer = len(self.players) - 1
+
     def nextPlayer(self, count=1):
         if len(self.players) <= 1:
             self.gameEnd()
@@ -527,12 +633,16 @@ class gameMaster:
             "type": "status",
             "dat": "playing"
         })
-        for x in range(count):
-            self.currentPlayer += self.direction
-            if self.currentPlayer >= len(self.players):
-                self.currentPlayer = 0
-            if self.currentPlayer < 0:
-                self.currentPlayer = len(self.players) - 1
+        if self.specialAction.startswith("winAussetzen"):
+            if self.specialAction.split("_")[1] == "0":
+                self.specialAction = ""
+                self.nextPlayer()
+                return
+            self.specialAction = self.specialAction.split(
+                "_")[0] + "_" + str(int(self.specialAction.split("_")[1])-1)
+        else:
+            for x in range(count):
+                self.nextPlayerWithoutAsking()
         self.askPlayer()
 
     def easyEvents(self, etype, dat=None):
@@ -979,7 +1089,10 @@ class Player:
                             "dat": "get_name"
                         }))
             elif data["type"] == "lay_card":
-                master.layCard(data["dat"], self.playerId)
+                d2 = None
+                if "dat2" in data.keys():
+                    d2 = data["dat2"]
+                master.layCard(data["dat"], self.playerId, d2)
             elif data["type"] == "drawCard":
                 master.drawCard(self.playerId)
             elif data["type"] == "select_color":
