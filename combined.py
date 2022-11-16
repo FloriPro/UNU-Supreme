@@ -65,7 +65,7 @@ allDeck = []
 for x in range(40):
     allDeck += deck
 
-noCardLimit = False
+noCardLimit = True
 startCardCount = 2
 startCode = "pls"
 
