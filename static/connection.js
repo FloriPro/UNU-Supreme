@@ -13,6 +13,12 @@ let cardImages = {};
 /**
  * @type {HTMLImageElement}
  */
+let coulorSelectType = "send"
+/**
+ * resolve promise
+ */
+let coulorSelectAsync = () => { }
+
 let currentlyClicked = undefined;
 let secondTime = false;
 /**
@@ -469,8 +475,8 @@ function genCombiTeller(cards) {
         div.append(img);
     }
 
-    div.onclick = () => {
-        ws.send(JSON.stringify({ "type": "lay_card", "dat": cards }))
+    div.onclick = async () => {
+        ws.send(JSON.stringify({ "type": "lay_card", "dat": cards, "dat2": await asColourSelect() }))
     }
 
     return div;
@@ -597,12 +603,21 @@ async function slowRemove(element) {
     element.remove();
 }
 
+async function asColourSelect() {
+    var p = new Promise((resolve, reject) => { coulorSelectAsync = resolve; })
+    document.querySelector("#colorInput").style.display = "flex";
+    coulorSelectType = "async";
+    return p
+}
+
 function selectColor(color) {
-    //if (playerStatus == "waiting_for_color") {
-    ws.send(JSON.stringify({ "type": "select_color", "dat": color }))
-    //} else {
-    //    addMessage("Du kannst gerade keine Farbe wählen!");
-    //}
+    if (coulorSelectType == "send") {
+        ws.send(JSON.stringify({ "type": "select_color", "dat": color }))
+    } else if (coulorSelectType == "async") {
+        coulorSelectAsync(color);
+        document.querySelector("#colorInput").style.display = "none";
+        coulorSelectType = "send"
+    }
 }
 function layCard(card, thisCard) {
     currentlyClicked = thisCard;
