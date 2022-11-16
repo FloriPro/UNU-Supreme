@@ -634,7 +634,7 @@ class gameMaster:
             "dat": "playing"
         })
         if self.specialAction.startswith("winAussetzen"):
-            if self.specialAction.split("_")[1] == "0":
+            if self.specialAction.split("_")[1] == "1":
                 self.specialAction = ""
                 self.nextPlayer()
                 return
