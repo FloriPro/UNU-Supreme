@@ -9,7 +9,7 @@ let wantsType = "player";
  * @type {{[cardName: string]:string}}
  */
 let cardImages = {};
-
+let allCards = []
 /**
  * @type {HTMLImageElement}
  */
@@ -368,14 +368,36 @@ function connect() {
                 document.querySelector("#specificSelect").style.display = "flex";
                 document.querySelector("#specificSelectHolder").innerHTML = "";
 
+                if (data["dat"]["dat"]["options"] == "_deck") {
+                    var o = {}
+                    for (var x of allCards) {
+                        o[x] = x;
+                    }
+                    data["dat"]["dat"]["options"] = o
+                }
+
                 var h = document.createElement("h1");
                 h.innerText = data["dat"]["dat"]["title"]
                 document.querySelector("#specificSelectHolder").append(h)
+                if (data["dat"]["dat"]["cancel"] == true) {
+                    document.querySelector("#specificSelectCancel").style.display = "";
+                } else {
+                    document.querySelector("#specificSelectCancel").style.display = "none";
+                }
 
                 for (var x of Object.keys(data["dat"]["dat"]["options"])) {
-                    var button = document.createElement("button");
-                    button.innerText = x;
-                    button.onclick = () => { ws.send(JSON.stringify({ "type": "selectResponse", "dat": data["dat"]["dat"]["options"][x] })) }
+                    var button;
+                    if (data["dat"]["dat"]["type"] == "text") {
+                        button = document.createElement("button")
+                        button.innerText = x;
+                    } else if (data["dat"]["dat"]["type"] == "card") {
+                        button = getCard(x);
+                    } else {
+                        button = document.createElement("button")
+                        button.innerText = "Error: no type " + data["dat"]["dat"]["type"] + " | " + x;
+                    }
+                    button.alt = data["dat"]["dat"]["options"][x]
+                    button.onclick = (event) => { ws.send(JSON.stringify({ "type": "selectResponse", "dat": event.target.alt })) }
                     document.querySelector("#specificSelectHolder").append(button)
                 }
                 return;
@@ -407,7 +429,6 @@ function connect() {
                 document.querySelector("#lookOnTable").style.display = "none";
             }
 
-
             if (playerStatus != "waiting_for_name") {
                 document.querySelector("#nameInput").style.display = "none";
             }
@@ -429,6 +450,7 @@ function connect() {
 let preloadCard = 0;
 let preloadedCard = 0;
 async function loadCardImages(cards) {
+    allCards = cards;
     preloadCard = cards.length;
     document.querySelector("#preloadIMG").style.display = "flex";
     document.querySelector("#preloadIMGText").innerText = "Preloading Images 0/" + preloadCard;
@@ -463,7 +485,7 @@ async function loadCardImage(x, i) {
     }
 }
 
-function genCombiTeller(cards) {
+function genCombiTeller(cards, needsColour) {
     var div = document.createElement("div");
     div.className = "combiShowerBody"
 
@@ -475,8 +497,14 @@ function genCombiTeller(cards) {
         div.append(img);
     }
 
-    div.onclick = async () => {
-        ws.send(JSON.stringify({ "type": "lay_card", "dat": cards, "dat2": await asColourSelect() }))
+    if (needsColour) {
+        div.onclick = async () => {
+            ws.send(JSON.stringify({ "type": "lay_card", "dat": cards, "dat2": await asColourSelect() }))
+        }
+    } else {
+        div.onclick = async () => {
+            ws.send(JSON.stringify({ "type": "lay_card", "dat": cards }))
+        }
     }
 
     return div;
@@ -515,7 +543,7 @@ function updateCombinations() {
         }
 
         if (e == true) {
-            combinations.push(["red_" + x, "green_" + x, "blue_" + x, "yellow_" + x]);
+            combinations.push([["red_" + x, "green_" + x, "blue_" + x, "yellow_" + x], true]);
         }
     }
 
@@ -532,10 +560,11 @@ function updateCombinations() {
             if (e == true) {
                 var t = []
                 for (var y of x.reverse()) {
-                    t.push([z + "_" + y])
+                    t.push(z + "_" + y)
                 }
+                x.reverse()
 
-                combinations.push(t);
+                combinations.push([t, false]);
             }
         }
     }
@@ -543,7 +572,7 @@ function updateCombinations() {
     //show them with no animation
     document.querySelector("#combinations").innerHTML = "";
     for (var x of combinations) {
-        document.querySelector("#combinations").append(genCombiTeller(x));
+        document.querySelector("#combinations").append(genCombiTeller(x[0], x[1]));
     }
 
 
