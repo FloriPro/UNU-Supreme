@@ -23,8 +23,8 @@ app.config.from_object(__name__)
 if os.path.isdir("/home/runner") == True:
     # on replit
     serverHost = "wss://${location.hostname}/sock"  # ${location.hostname}
-    startCode = os.getenv("pass")
-    loginKey = os.getenv("key")
+    startCode = os.environ["pass"]
+    loginKey = os.environ["key"]
 else:
     # not on replit
     serverHost = "ws://${location.hostname}/sock"  # ${location.hostname}
