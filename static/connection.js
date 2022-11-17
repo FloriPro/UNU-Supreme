@@ -5,6 +5,15 @@ const otherCombos = [["9", "6"], ["0", "2", "4"]]
 
 let wantsType = "player";
 
+
+let password;
+if (getCookie("p") == undefined) {
+    password = prompt("UNO Password")
+    setCookie("p", password, 100);
+} else {
+    password = getCookie("p");
+}
+
 /**
  * @type {{[cardName: string]:string}}
  */
@@ -54,7 +63,7 @@ function connect() {
         }
 
         document.querySelector("#wonPlayers").innerHTML = "";
-        ws.send(JSON.stringify({ "type": "typeStatus", "dat": wantsType, "dat2": isSecondTime }));
+        ws.send(JSON.stringify({ "type": "typeStatus", "dat": wantsType, "dat2": isSecondTime, "dat3": password }));
         document.querySelector("#connected_status").style.display = "none";
         secondTime = true;
     }
@@ -441,6 +450,11 @@ function connect() {
                 document.querySelector("#twoxinputPositions").innerHTML = "";
             }
             return;
+        }
+        else if (data["type"] == "wrongPass") {
+            password = prompt("UNO password falsch!")
+            setCookie("p", password, 100);
+            reconnect()
         }
 
         console.log(data);

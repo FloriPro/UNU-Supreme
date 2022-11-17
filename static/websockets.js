@@ -1,5 +1,13 @@
 let connections = 0;
 
+let password;
+if (getCookie("p") == undefined) {
+    password = prompt("UNO Password")
+    setCookie("p", password, 100);
+} else {
+    password = getCookie("p");
+}
+
 class player {
     constructor(id) {
         this.id = id;
@@ -28,7 +36,7 @@ class player {
         this.ws.onopen = function (event) {
             newWS();
             this.ws.init = true;
-            this.ws.send(JSON.stringify({ "type": "typeStatus", "dat": "player" }));
+            this.ws.send(JSON.stringify({ "type": "typeStatus", "dat": "player" ,"dat3":password}));
         }
         this.ws.onmessage = async function (event) {
             /**
@@ -156,6 +164,11 @@ class player {
             else if (data["type"] == "status") {
                 thi.playerStatus = data["dat"];
                 return;
+            }
+            else if (data["type"] == "wrongPass"){
+                password=prompt("UNO password falsch!")
+                setCookie("p",password,100);
+                reconnect()
             }
         }
     }

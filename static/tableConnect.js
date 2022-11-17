@@ -3,6 +3,13 @@ const maxCardRotation = 10;
 
 let typ = "normal";
 
+let password;
+if (getCookie("p") == undefined) {
+    password = prompt("UNO Password")
+    setCookie("p", password, 100);
+} else {
+    password = getCookie("p");
+}
 
 if (location.search != "") {
     var s = location.search.replace("?", "");
@@ -33,7 +40,7 @@ ws.onclose = function (event) {
     addMessage("Fehler: Die verbindung wurde geschlossen!");
 }
 ws.onopen = function (event) {
-    ws.send(JSON.stringify({ "type": "typeStatus", "dat": "table", "dat2": typ }));
+    ws.send(JSON.stringify({ "type": "typeStatus", "dat": "table", "dat2": typ, "dat3": password }));
     document.querySelector("#connected_status").style.display = "none";
 }
 
@@ -177,6 +184,11 @@ ws.onmessage = async function (event) {
         li.innerText = data["dat"];
         document.querySelector("#wonPlayers").append(li);
         return;
+    }
+    if (data["type"] == "wrongPass") {
+        password = prompt("UNO password falsch!")
+        setCookie("p", password, 100);
+        reconnect()
     }
 
     addMessage(JSON.stringify(data));

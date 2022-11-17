@@ -23,9 +23,13 @@ app.config.from_object(__name__)
 if os.path.isdir("/home/runner") == True:
     # on replit
     serverHost = "wss://${location.hostname}/sock"  # ${location.hostname}
+    startCode = os.getenv("pass")
+    loginKey = os.getenv("key")
 else:
     # not on replit
     serverHost = "ws://${location.hostname}/sock"  # ${location.hostname}
+    startCode = "pls"
+    loginKey = "pls"
 
 
 cards = {
@@ -71,11 +75,9 @@ for x in range(40):
 
 noCardLimit = True
 startCardCount = 2
-startCode = "pls"
 
 
 class gameMaster:
-
     def __init__(self):
 
         self.twoPlusAdder = 0
@@ -376,7 +378,7 @@ class gameMaster:
                         break
                     i += 1
 
-        if cards[0].split("_")[0] != self.lyingCards[-1].split("_")[0]:
+        if not specificColour and cards[0].split("_")[0] != self.lyingCards[-1].split("_")[0]:
             self.addEvent(
                 playerId, {"type": "message", "dat": "du darfst diese Karte nicht legen!"})
             return False
@@ -593,6 +595,12 @@ class gameMaster:
                         }
                     })
                 )
+            elif self.isThisCombo(card, ["yellow_komunist", "blue_komunist", "green_komunist", "red_komunist"], playerId, True, topCardColor):
+                if len(self.playerDeck[playerId]) == 0:
+                    self.playerWin(playerId)
+                    self.komunist()
+                    return
+                self.komunist(True, playerId)
             else:
                 print(card)
                 self.playerClasses[playerId].send_message(
@@ -617,12 +625,12 @@ class gameMaster:
             self.addEvents({"type": "message", "dat": msg})
             self.sendWatcher({"type": "message", "dat": msg})
 
-    def komunist(self):
+    def komunist(self, windows=False, windowsPlayer=-1):
         toMix = []
         for key, value in self.playerDeck.items():
             self.playerDeck[key] = []
             toMix += value
-            sleep(1)
+            sleep(0.2)
             self.addEvent(key, {
                 "type": "stats",
                 "dat": {
@@ -633,22 +641,40 @@ class gameMaster:
             self.easyEvents("playerCardCount")
 
         for s in range(5):
-            sleep(2)
+            sleep(0.2)
             self.messageAll(f"mischen... {s+1}/5")
 
         cards = ceil(len(toMix) / len(self.players))
 
-        for x in range(cards):
-            for player in self.players:
-                if len(toMix) != 0:
-                    choice = random.randint(0, len(toMix) - 1)
-                    self.playerDeck[player].append(toMix[choice])
-                    toMix.pop(choice)
-                else:
-                    choice = random.randint(0, len(self.availableCards) - 1)
-                    self.playerDeck[player].append(self.availableCards[choice])
-                    self.availableCards.pop(choice)
-
+        if windows == False:
+            for x in range(cards):
+                for player in self.players:
+                    if len(toMix) != 0:
+                        choice = random.randint(0, len(toMix) - 1)
+                        self.playerDeck[player].append(toMix[choice])
+                        toMix.pop(choice)
+                    else:
+                        choice = random.randint(
+                            0, len(self.availableCards) - 1)
+                        self.playerDeck[player].append(
+                            self.availableCards[choice])
+                        self.availableCards.pop(choice)
+        else:
+            toggle = True
+            for x in range(cards):
+                for player in self.players:
+                    if windowsPlayer != player or toggle:
+                        if len(toMix) != 0:
+                            choice = random.randint(0, len(toMix) - 1)
+                            self.playerDeck[player].append(toMix[choice])
+                            toMix.pop(choice)
+                        else:
+                            choice = random.randint(
+                                0, len(self.availableCards) - 1)
+                            self.playerDeck[player].append(
+                                self.availableCards[choice])
+                            self.availableCards.pop(choice)
+                    toggle = not toggle
         # update players of their deck
         for player in self.players:
             self.addEvent(
@@ -1134,8 +1160,8 @@ class Player:
                             {"type": "message", "dat": "Dieser Spieler existiert nicht!"}))
                         return
                 elif self.currentAction == "specificSelect_96":
-                    if data["dat"]=="_cancel":
-                        self.currentAction=""
+                    if data["dat"] == "_cancel":
+                        self.currentAction = ""
                         master.nextPlayer()
                         self.send_message(json.dumps(
                             {"type": "action", "dat": "closeSpecificSelect"}))
@@ -1160,7 +1186,7 @@ class Player:
                                         "title": f"Welche karte möchtest du haben, die vorherige gibt es nicht (noch {self.i} versuch(e))",
                                         "options": "_deck",
                                         "type": "card",
-                                        "cancel":True
+                                        "cancel": True
                                     }
                                 }
                             })
@@ -1203,7 +1229,7 @@ class Player:
                                             "title": f"Welche karte möchtest du haben, die vorherige gibt es nicht (noch {self.i} versuch(e))",
                                             "options": "_deck",
                                             "type": "card",
-                                            "cancel":True
+                                            "cancel": True
                                         }
                                     }
                                 })
@@ -1263,6 +1289,12 @@ class Player:
             elif data["type"] == "withdraw2x":
                 master.withdraw2x(self.playerId)
             elif data["type"] == "typeStatus":
+                if ("dat3" not in data or data["dat3"] != loginKey) and loginKey != "":
+                    self.send_message('{"type":"wrongPass"}')
+                    sleep(0.5)
+                    self.handle_close()
+                    self.client.close_connection(self.idet)
+                    return
                 if data["dat"] == "player":
                     secondTime = False
                     if "dat2" in data:
@@ -1437,7 +1469,8 @@ class Player:
                 master.watchers.remove(self)
             master.easyEvents("disconnect")
             if not notReal:
-                print(self.idet, 'closed')
+                #print(self.idet, 'closed')
+                pass
         except:
             if not notReal:
                 print(self.idet, 'closed')
@@ -1581,7 +1614,6 @@ def add_header(r):
 
 
 class Client():
-
     def __init__(self):
         self.clients = {}
         self.rec = {}
@@ -1601,7 +1633,7 @@ class Client():
     def active_client(self, idet):
         if idet in self.clients.keys():
             return True
-        print("not active_client")
+        #print("not active_client")
         return False
 
     def check_disconnect(self, idet):
@@ -1611,8 +1643,9 @@ class Client():
                 sleep(0.05)
             self.close_connection(idet)
         except Exception as e:
-            print("check disconnected errored")
-            print(e)
+            #print("check disconnected errored")
+            # print(e)
+            pass
 
     def close_connection(self, idet):
         if idet in self.rec.keys():
@@ -1631,6 +1664,7 @@ def echo(ws):
     while client.active_client(idet):
         client.run(idet)
     ws.close(1006, "Invalid Message")
+    return
     print("Client disconnected because of an error")
 
 

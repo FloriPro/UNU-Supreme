@@ -25,10 +25,16 @@
                 document.querySelector("#consoleList").prepend(a)
             }
             ws.onopen = function (event) {
-                ws.send(JSON.stringify({ "type": "typeStatus", "dat": "console" }))
+                ws.send(JSON.stringify({ "type": "typeStatus", "dat": "console", "dat3": document.querySelector("#pass").value }))
             }
             ws.onmessage = function (event) {
                 var t = event.data;
+
+                //if (data == '{"type":"wrongPass"}') {
+                //    password = prompt("UNO password falsch!")
+                //    setCookie("p", password, 100);
+                //    return
+                //}
                 if (event.data == "") {
                     log_i("null");
                 } else {
@@ -82,6 +88,7 @@
 </head>
 
 <body>
+    <input id="pass" placeholder="UNO password">
     <p>Commands:</p>
     <ul>
         <li>give &lt;card&gt; &lt;player-Id&gt;</li>
