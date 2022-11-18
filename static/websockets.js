@@ -2,7 +2,7 @@ let connections = 0;
 
 let password;
 if (getCookie("p") == undefined) {
-    password = prompt("UNO Password")
+    password = await prompt("UNO Password")
     setCookie("p", password, 100);
 } else {
     password = getCookie("p");
@@ -166,7 +166,7 @@ class player {
                 return;
             }
             else if (data["type"] == "wrongPass"){
-                password=prompt("UNO password falsch!")
+                password=await prompt("UNO password falsch!")
                 setCookie("p",password,100);
                 reconnect()
             }
@@ -221,7 +221,7 @@ function removeWS() {
 }
 
 let players = []
-var a = parseInt(prompt("anzahl"));
+var a = parseInt(await prompt("anzahl"));
 //var a = 1;
 for (var x = 0; x < a; x++) {
     players.push(new player(x));

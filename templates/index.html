@@ -93,7 +93,7 @@
 
     <h1 id="lookOnTable" style="display: none;">Hier kannst du zurzeit nichts machen</h1>
 
-    <button onclick='ws.send(JSON.stringify({"type":"start_game", "dat":prompt("start-code:")}))' id="startGame"
+    <button onclick='ws.send(JSON.stringify({"type":"start_game", "dat":await prompt("start-code:")}))' id="startGame"
         style="display: none;">Spiel
         starten</button>
 </body>

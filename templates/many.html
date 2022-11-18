@@ -4,9 +4,10 @@
 <head>
     <script>const serverHost = `{{serverHost}}`;</script>
     <title>Multiple instances</title>
+    <script src="{{ url_for('static', filename='main.js') }}"></script>
     <script>
         function make() {
-            var c = parseInt(prompt('anzahl'));
+            var c = parseInt(await prompt('anzahl'));
             for (var x = 0; x < c; x++) {
                 var d = document.createElement("iframe");
 

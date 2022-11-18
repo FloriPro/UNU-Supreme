@@ -1,3 +1,37 @@
+let ___connectionId = "";
+let ___origin = "";
+let ___returns = {}
+//check if run in floripro.github.io as a frame
+window.addEventListener('message', function (e) {
+    var data = JSON.parse(e.data);
+    if (data["type"] == "newConnection") {
+        ___connectionId = data["id"];
+        ___origin = data["origin"]
+
+        //overwrite functions
+        alert = (t) => {
+            window.parent.postMessage(JSON.stringify({ "type": "alert", "text": t, "id": ___connectionId }), ___origin)
+        }
+        prompt = (t) => {
+            return new Promise((resolve, reject) => {
+                var returnId = Math.floor(Math.random() * 100000).toString();
+                ___returns[returnId] = resolve;
+                window.parent.postMessage(JSON.stringify({ "type": "prompt", "text": t, "id": ___connectionId, "returnid": returnId }), ___origin)
+            })
+        }
+        confirm = (t) => {
+            return new Promise((resolve, reject) => {
+                var returnId = Math.floor(Math.random() * 100000).toString();
+                ___returns[returnId] = resolve;
+                window.parent.postMessage(JSON.stringify({ "type": "confirm", "text": t, "id": ___connectionId, "returnid": returnId }), ___origin)
+            })
+        }
+    }
+    if (data["type"] == "return") {
+        ___returns[data["id"]](data["return"]);
+    }
+});
+
 function setCookie(cname, cvalue, exdays) {
     const d = new Date();
     d.setTime(d.getTime() + (exdays * 24 * 60 * 60 * 1000));
