@@ -962,11 +962,15 @@ class gameMaster:
         threading.Thread(target=self.threadedEnd, daemon=True).start()
 
     def threadedEnd(self):
+        if self.status == "gameEnd":
+            return
+        self.status = "gameEnd"
         sleep(1)
         self.messageAll("Spiel vorbei. Nur noch ein Spieler übrig!")
         self.messageAll("Ein neues Spiel wird gestarted.")
-        self.status = "waiting_for_players"
         sleep(3)
+        self.status = "waiting_for_players"
+
         for x in self.watchers:
             # x.send_message(json.dumps(
             #    {"type": "message", "dat": "Neues Spiel!"}))
