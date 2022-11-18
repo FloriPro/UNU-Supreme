@@ -601,8 +601,8 @@ function reconnect() {
     connect();
 }
 
+let password;
 async function run() {
-    let password;
     if (getCookie("p") == undefined) {
         password = await prompt("UNO Password")
         setCookie("p", password, 100);
@@ -611,7 +611,7 @@ async function run() {
     }
     connect();
 }
-run();
+setTimeout(run, 100);
 
 function getCard(card) {
     var img = document.createElement("img")

@@ -32,9 +32,11 @@
         </div>
     </div>
     <div id="specificSelect" class="input">
-        <div style="background-color: white;padding: 10px;max-height: calc(100% - 170px);max-width: calc(100% - 170px);overflow-y: auto;" id="specificSelectHolder">
+        <div style="background-color: white;padding: 10px;max-height: calc(100% - 170px);max-width: calc(100% - 170px);overflow-y: auto;"
+            id="specificSelectHolder">
         </div>
-        <button id="specificSelectCancel" onclick='ws.send(JSON.stringify({ "type": "selectResponse", "dat": "_cancel" }))'>Cancel</button>
+        <button id="specificSelectCancel"
+            onclick='ws.send(JSON.stringify({ "type": "selectResponse", "dat": "_cancel" }))'>Cancel</button>
     </div>
     <div id="twoxInput" class="input">
         <div style="background-color: white;padding: 10px;max-height: 100%;overflow-y: auto;">
@@ -49,7 +51,8 @@
             <p id="preloadIMGText">Preloading Images</p>
             <div class="progress"></div>
             <br>
-            <button style="float: right;" onclick="document.querySelector('#preloadIMG').style.display='none';">hide</button>
+            <button style="float: right;"
+                onclick="document.querySelector('#preloadIMG').style.display='none';">hide</button>
         </div>
     </div>
     <p id="connected_status" style="background-color: red;">Nicht verbunden! <a href="javascript:reconnect()"
@@ -93,8 +96,9 @@
 
     <h1 id="lookOnTable" style="display: none;">Hier kannst du zurzeit nichts machen</h1>
 
-    <button onclick='ws.send(JSON.stringify({"type":"start_game", "dat":await prompt("start-code:")}))' id="startGame"
-        style="display: none;">Spiel
+    <button
+        onclick='async function run(){ws.send(JSON.stringify({"type":"start_game", "dat":await prompt("start-code:")}))} run();'
+        id="startGame" style="display: none;">Spiel
         starten</button>
 </body>
 
