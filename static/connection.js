@@ -1,3 +1,4 @@
+let ws;
 async function run() {
     const rot = 40;
     const colors = ["red", "green", "blue", "yellow"];
@@ -34,7 +35,6 @@ async function run() {
     /**
      * @type {WebSocket}
      */
-    let ws;
     let playerStatus;
     let playerId;
     let currentPlayer;

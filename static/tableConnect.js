@@ -1,5 +1,6 @@
+let ws;
 async function run() {
-    let ws = new WebSocket(serverHost);
+    ws = new WebSocket(serverHost);
     const maxCardRotation = 10;
 
     let typ = "normal";
