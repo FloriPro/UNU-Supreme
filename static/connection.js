@@ -611,7 +611,7 @@ async function run() {
     }
     connect();
 }
-setTimeout(run, 100);
+setTimeout(run, 1);
 
 function getCard(card) {
     var img = document.createElement("img")
