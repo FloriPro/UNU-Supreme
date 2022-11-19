@@ -1,30 +1,70 @@
 let ___connectionId = "";
 let ___origin = "";
 let ___returns = {}
+let ___connectionLoadedWaiters = []
 //check if run in floripro.github.io as a frame
+async function ___connectionLoaded() {
+    if (___connectionId != "") {
+        return
+    }
+    return new Promise((resolve) => {
+        ___connectionLoadedWaiters.push(resolve);
+    })
+}
+if (window.self !== window.top) {
+    let ___oldalert = alert
+    let ___oldprompt = prompt
+    let ___oldconfirm = confirm
+    //overwrite functions
+    alert = async (t) => {
+        var r = await ___connectionLoaded();
+        if (r == false) {
+            return alert(t);
+        }
+        window.parent.postMessage(JSON.stringify({ "type": "alert", "text": t, "id": ___connectionId }), ___origin)
+    }
+    prompt = async (t) => {
+        var r = await ___connectionLoaded();
+        if (r == false) {
+            return prompt(t);
+        }
+        return await new Promise((resolve, reject) => {
+            var returnId = Math.floor(Math.random() * 100000).toString();
+            ___returns[returnId] = resolve;
+            window.parent.postMessage(JSON.stringify({ "type": "prompt", "text": t, "id": ___connectionId, "returnid": returnId }), ___origin)
+        })
+    }
+    confirm = async (t) => {
+        var r = await ___connectionLoaded();
+        if (r == false) {
+            return confirm(t);
+        }
+        return await new Promise((resolve, reject) => {
+            var returnId = Math.floor(Math.random() * 100000).toString();
+            ___returns[returnId] = resolve;
+            window.parent.postMessage(JSON.stringify({ "type": "confirm", "text": t, "id": ___connectionId, "returnid": returnId }), ___origin)
+        })
+    }
+
+    //return to normal after one second of no message from the parent window
+    setTimeout(() => {
+        if (___connectionId == "") {
+            alert = ___oldalert
+            prompt = ___oldprompt
+            confirm = ___oldconfirm
+            for (var x of ___connectionLoadedWaiters) {
+                x(false);
+            }
+        }
+    }, 5000);
+}
 window.addEventListener('message', function (e) {
     var data = JSON.parse(e.data);
     if (data["type"] == "newConnection") {
         ___connectionId = data["id"];
-        ___origin = data["origin"]
-
-        //overwrite functions
-        alert = (t) => {
-            window.parent.postMessage(JSON.stringify({ "type": "alert", "text": t, "id": ___connectionId }), ___origin)
-        }
-        prompt = (t) => {
-            return new Promise((resolve, reject) => {
-                var returnId = Math.floor(Math.random() * 100000).toString();
-                ___returns[returnId] = resolve;
-                window.parent.postMessage(JSON.stringify({ "type": "prompt", "text": t, "id": ___connectionId, "returnid": returnId }), ___origin)
-            })
-        }
-        confirm = (t) => {
-            return new Promise((resolve, reject) => {
-                var returnId = Math.floor(Math.random() * 100000).toString();
-                ___returns[returnId] = resolve;
-                window.parent.postMessage(JSON.stringify({ "type": "confirm", "text": t, "id": ___connectionId, "returnid": returnId }), ___origin)
-            })
+        ___origin = data["origin"];
+        for (var x of ___connectionLoadedWaiters) {
+            x();
         }
     }
     if (data["type"] == "return") {
