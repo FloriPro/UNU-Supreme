@@ -2,7 +2,7 @@
 <html>
 
 <head>
-    <script>const serverHost = `{{serverHost}}`;</script>
+    <script>const serverHost = `{{serverHost|safe}}`;</script>
     <script src="/static/websockets.js"></script>
     <script src="{{ url_for('static', filename='main.js') }}"></script>
     <title>weboscket Tester</title>

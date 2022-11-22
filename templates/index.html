@@ -2,7 +2,7 @@
 <html>
 
 <head>
-    <script>const serverHost = `{{serverHost}}`;</script>
+    <script>const serverHost = `{{serverHost|safe}}`;</script>
     <title>UNU Supreme</title>
     <script>
         window.onerror = function (error, url, line) {

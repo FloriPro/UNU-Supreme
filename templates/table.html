@@ -2,7 +2,7 @@
 <html>
 
 <head>
-    <script>const serverHost = `{{serverHost}}`;</script>
+    <script>const serverHost = `{{serverHost|safe}}`;</script>
     <title>Tisch stuff</title>
     <script src="{{ url_for('static', filename='main.js') }}"></script>
     <script defer src="static/tableConnect.js"></script>

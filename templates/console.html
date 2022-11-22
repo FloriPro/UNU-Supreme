@@ -2,7 +2,7 @@
 <html>
 
 <head>
-    <script>const serverHost = `{{serverHost}}`;</script>
+    <script>const serverHost = `{{serverHost|safe}}`;</script>
     <title>Debug Console</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <script src="{{ url_for('static', filename='main.js') }}"></script>

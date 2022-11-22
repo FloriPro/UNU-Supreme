@@ -12,7 +12,6 @@ from flask_sock import Sock
 from threading import Timer, Thread
 import logging
 
-
 log = logging.getLogger('werkzeug')
 log.setLevel(logging.ERROR)
 app = Flask(__name__)
@@ -22,7 +21,7 @@ app.jinja_env.auto_reload = True
 app.config.from_object(__name__)
 if os.path.isdir("/home/runner") == True:
     # on replit
-    serverHost = "wss://${location.hostname}/sock"  # ${location.hostname}
+    serverHost = 'ws${location.protocol.replace("http","").replace(":","")}://${location.hostname}/sock'  # ${location.hostname}
     startCode = os.environ["startKey"]
     loginKey = os.environ["loginKey"]
 else:
@@ -30,7 +29,6 @@ else:
     serverHost = "ws://${location.hostname}/sock"  # ${location.hostname}
     startCode = "pls"
     loginKey = "pls"
-
 
 cards = {
     "red": {
@@ -78,6 +76,7 @@ startCardCount = 2
 
 
 class gameMaster:
+
     def __init__(self):
 
         self.twoPlusAdder = 0
@@ -297,10 +296,14 @@ class gameMaster:
                             " Karten gezogen"
                         }))
                     self.twoPlusAdder = 0
-                    self.addEvent(
-                        playerId, {"type": "status", "dat": "slectCard"})
-                    self.addEvent(
-                        playerId, {"type": "action", "dat": "slectCard"})
+                    self.addEvent(playerId, {
+                        "type": "status",
+                        "dat": "slectCard"
+                    })
+                    self.addEvent(playerId, {
+                        "type": "action",
+                        "dat": "slectCard"
+                    })
         else:
             self.twoPlusAdder = 0
             self.addEvent(playerId, {"type": "status", "dat": "slectCard"})
@@ -359,7 +362,12 @@ class gameMaster:
             }))
         self.playerClasses[playerId].handle_close(True)
 
-    def isThisCombo(self, cards, comboCards, playerId, specificColour=False, topCardColor="green"):
+    def isThisCombo(self,
+                    cards,
+                    comboCards,
+                    playerId,
+                    specificColour=False,
+                    topCardColor="green"):
         if len(comboCards) != len(cards):
             return False
         for x in range(len(cards)):
@@ -378,9 +386,12 @@ class gameMaster:
                         break
                     i += 1
 
-        if not specificColour and cards[0].split("_")[0] != self.lyingCards[-1].split("_")[0]:
-            self.addEvent(
-                playerId, {"type": "message", "dat": "du darfst diese Karte nicht legen!"})
+        if not specificColour and cards[0].split(
+                "_")[0] != self.lyingCards[-1].split("_")[0]:
+            self.addEvent(playerId, {
+                "type": "message",
+                "dat": "du darfst diese Karte nicht legen!"
+            })
             return False
 
         coulourCard = ""
@@ -397,9 +408,10 @@ class gameMaster:
             else:
                 i = 0
                 while True:
-                    if self.playerDeck[playerId][i].split("_")[0] == x.split("_")[0]:
-                        self.easyEvents(
-                            "cardAdd", self.playerDeck[playerId][i])
+                    if self.playerDeck[playerId][i].split("_")[0] == x.split(
+                            "_")[0]:
+                        self.easyEvents("cardAdd",
+                                        self.playerDeck[playerId][i])
                         self.addCard(self.playerDeck[playerId][i])
                         self.playerDeck[playerId].remove(
                             self.playerDeck[playerId][i])
@@ -522,16 +534,22 @@ class gameMaster:
                 if x not in self.playerDeck[playerId]:
                     self.playerClasses[playerId].send_message(
                         json.dumps({
-                            "type": "message",
-                            "dat": "Fehler! Du besitzt mindestens eine dieser Karten nicht!"
+                            "type":
+                            "message",
+                            "dat":
+                            "Fehler! Du besitzt mindestens eine dieser Karten nicht!"
                         }))
                     return
 
-            if self.isThisCombo(card, ["yellow_richtungswechsel", "blue_richtungswechsel", "green_richtungswechsel", "red_richtungswechsel"], playerId, True, topCardColor):
+            if self.isThisCombo(card, [
+                    "yellow_richtungswechsel", "blue_richtungswechsel",
+                    "green_richtungswechsel", "red_richtungswechsel"
+            ], playerId, True, topCardColor):
                 if len(self.playerDeck[playerId]) == 0:
                     self.playerWin(playerId)
                     return
-                self.playerClasses[playerId].currentAction = "specificSelect_winRichtungswechsel"
+                self.playerClasses[
+                    playerId].currentAction = "specificSelect_winRichtungswechsel"
 
                 allPlayers = {}
                 for x in self.players:
@@ -546,40 +564,49 @@ class gameMaster:
                         "dat": {
                             "type": "specificSelect",
                             "dat": {
-                                "title": "Mit welchem spieler willst du tauschen?",
+                                "title":
+                                "Mit welchem spieler willst du tauschen?",
                                 "options": allPlayers,
                                 "type": "text"
                             }
                         }
-                    })
-                )
+                    }))
                 self.playerClasses[playerId].send_message(
                     json.dumps({
                         "type": "message",
                         "dat": "Karten-combo gelegt"
                     }))
-            elif (not self.specialAction.startswith("winAussetzen")) and self.isThisCombo(card, ["yellow_aussetzen", "blue_aussetzen", "green_aussetzen", "red_aussetzen"], playerId, True, topCardColor):
+            elif (not self.specialAction.startswith("winAussetzen")
+                  ) and self.isThisCombo(card, [
+                      "yellow_aussetzen", "blue_aussetzen", "green_aussetzen",
+                      "red_aussetzen"
+                  ], playerId, True, topCardColor):
                 if len(self.playerDeck[playerId]) == 0:
                     self.playerWin(playerId)
                     return
                 self.specialAction = "winAussetzen_4"
                 self.playerClasses[playerId].send_message(
                     json.dumps({
-                        "type": "message",
-                        "dat": "Karten-combo gelegt du kannst nun 4 mal Karten hintereinander legen"
+                        "type":
+                        "message",
+                        "dat":
+                        "Karten-combo gelegt du kannst nun 4 mal Karten hintereinander legen"
                     }))
                 self.nextPlayer()
             elif self.specialAction.startswith("winAussetzen"):
                 self.playerClasses[playerId].send_message(
                     json.dumps({
-                        "type": "message",
-                        "dat": "Windows-aussetzen-combo kann nicht addiert/kombiniert werden"
+                        "type":
+                        "message",
+                        "dat":
+                        "Windows-aussetzen-combo kann nicht addiert/kombiniert werden"
                     }))
             elif self.isThisCombo(card, ["9", "6"], playerId, False):
                 if len(self.playerDeck[playerId]) == 0:
                     self.playerWin(playerId)
                     return
-                self.playerClasses[playerId].currentAction = "specificSelect_96"
+                self.playerClasses[
+                    playerId].currentAction = "specificSelect_96"
                 self.playerClasses[playerId].i = 4
                 self.playerClasses[playerId].send_message(
                     json.dumps({
@@ -587,15 +614,18 @@ class gameMaster:
                         "dat": {
                             "type": "specificSelect",
                             "dat": {
-                                "title": f"Welche karte möchtest du haben (noch 4 versuch(e))",
+                                "title":
+                                f"Welche karte möchtest du haben (noch 4 versuch(e))",
                                 "options": "_deck",
                                 "type": "card",
                                 "cancel": True
                             }
                         }
-                    })
-                )
-            elif self.isThisCombo(card, ["yellow_komunist", "blue_komunist", "green_komunist", "red_komunist"], playerId, True, topCardColor):
+                    }))
+            elif self.isThisCombo(card, [
+                    "yellow_komunist", "blue_komunist", "green_komunist",
+                    "red_komunist"
+            ], playerId, True, topCardColor):
                 if len(self.playerDeck[playerId]) == 0:
                     self.playerWin(playerId)
                     self.komunist()
@@ -654,8 +684,8 @@ class gameMaster:
                         self.playerDeck[player].append(toMix[choice])
                         toMix.pop(choice)
                     else:
-                        choice = random.randint(
-                            0, len(self.availableCards) - 1)
+                        choice = random.randint(0,
+                                                len(self.availableCards) - 1)
                         self.playerDeck[player].append(
                             self.availableCards[choice])
                         self.availableCards.pop(choice)
@@ -670,7 +700,8 @@ class gameMaster:
                             toMix.pop(choice)
                         else:
                             choice = random.randint(
-                                0, len(self.availableCards) - 1)
+                                0,
+                                len(self.availableCards) - 1)
                             self.playerDeck[player].append(
                                 self.availableCards[choice])
                             self.availableCards.pop(choice)
@@ -731,8 +762,8 @@ class gameMaster:
                 self.specialAction = ""
                 self.nextPlayer()
                 return
-            self.specialAction = self.specialAction.split(
-                "_")[0] + "_" + str(int(self.specialAction.split("_")[1])-1)
+            self.specialAction = self.specialAction.split("_")[0] + "_" + str(
+                int(self.specialAction.split("_")[1]) - 1)
         else:
             for x in range(count):
                 self.nextPlayerWithoutAsking()
@@ -923,8 +954,10 @@ class gameMaster:
             if not has:
                 self.playerClasses[playerId].send_message(
                     json.dumps({
-                        "type": "message",
-                        "dat": "Da du keine Karten legen kannst wurde der nächste Spieler aufgerufen."
+                        "type":
+                        "message",
+                        "dat":
+                        "Da du keine Karten legen kannst wurde der nächste Spieler aufgerufen."
                     }))
                 self.nextPlayer()
             else:
@@ -1087,6 +1120,7 @@ master = gameMaster()
 
 
 class Player:
+
     def __init__(self, client, idet) -> None:
         self.type = ""
         self.currentAction = ""
@@ -1129,11 +1163,13 @@ class Player:
                         }
                     }))
 
-            elif self.currentAction.startswith("specificSelect_") and data["type"] == "selectResponse":
+            elif self.currentAction.startswith(
+                    "specificSelect_") and data["type"] == "selectResponse":
                 if self.currentAction == "specificSelect_winRichtungswechsel":
                     if data["dat"] in master.players:
                         p = master.playerDeck[self.playerId]
-                        master.playerDeck[self.playerId] = master.playerDeck[data["dat"]]
+                        master.playerDeck[self.playerId] = master.playerDeck[
+                            data["dat"]]
                         master.playerDeck[data["dat"]] = p
 
                         master.easyEvents("playerCardCount")
@@ -1154,21 +1190,36 @@ class Player:
                                 }
                             })
 
-                        self.send_message(json.dumps(
-                            {"type": "message", "dat": "Karten getauscht"}))
+                        self.send_message(
+                            json.dumps({
+                                "type": "message",
+                                "dat": "Karten getauscht"
+                            }))
                         master.addEvent(
-                            data["dat"], {"type": "message", "dat": master.playerNames[self.playerId]+" hat deine Karten getauscht"})
+                            data["dat"], {
+                                "type":
+                                "message",
+                                "dat":
+                                master.playerNames[self.playerId] +
+                                " hat deine Karten getauscht"
+                            })
                         master.nextPlayer()
                     else:
-                        self.send_message(json.dumps(
-                            {"type": "message", "dat": "Dieser Spieler existiert nicht!"}))
+                        self.send_message(
+                            json.dumps({
+                                "type": "message",
+                                "dat": "Dieser Spieler existiert nicht!"
+                            }))
                         return
                 elif self.currentAction == "specificSelect_96":
                     if data["dat"] == "_cancel":
                         self.currentAction = ""
                         master.nextPlayer()
-                        self.send_message(json.dumps(
-                            {"type": "action", "dat": "closeSpecificSelect"}))
+                        self.send_message(
+                            json.dumps({
+                                "type": "action",
+                                "dat": "closeSpecificSelect"
+                            }))
                         return
 
                     # get all users that have the specified card and select a random user
@@ -1179,34 +1230,41 @@ class Player:
                                 if x not in availableUsers:
                                     availableUsers.append(x)
                     if len(availableUsers) == 0:
-                        self.send_message(json.dumps(
-                            {"type": "message", "dat": "Es gibt keinen Spieler mit dieser Karte!"}))
+                        self.send_message(
+                            json.dumps({
+                                "type":
+                                "message",
+                                "dat":
+                                "Es gibt keinen Spieler mit dieser Karte!"
+                            }))
                         self.send_message(
                             json.dumps({
                                 "type": "action",
                                 "dat": {
                                     "type": "specificSelect",
                                     "dat": {
-                                        "title": f"Welche karte möchtest du haben, die vorherige gibt es nicht (noch {self.i} versuch(e))",
+                                        "title":
+                                        f"Welche karte möchtest du haben, die vorherige gibt es nicht (noch {self.i} versuch(e))",
                                         "options": "_deck",
                                         "type": "card",
                                         "cancel": True
                                     }
                                 }
-                            })
-                        )
+                            }))
                         return
                     else:
                         selectedUser = availableUsers[randint(
-                            0, len(availableUsers)-1)]
+                            0,
+                            len(availableUsers) - 1)]
                         master.playerDeck[selectedUser].remove(data["dat"])
                         if len(master.playerDeck[selectedUser]) == 0:
                             master.playerWin(selectedUser)
-                        master.addEvent(selectedUser, {
-                            "type": "action",
-                            "dat": "removeCard",
-                            "dat2": data["dat"]
-                        })
+                        master.addEvent(
+                            selectedUser, {
+                                "type": "action",
+                                "dat": "removeCard",
+                                "dat2": data["dat"]
+                            })
 
                         master.playerDeck[self.playerId].append(data["dat"])
                         master.addEvent(
@@ -1220,8 +1278,11 @@ class Player:
                         self.i -= 1
                         if self.i <= 0:
                             self.currentAction = ""
-                            self.send_message(json.dumps(
-                                {"type": "action", "dat": "closeSpecificSelect"}))
+                            self.send_message(
+                                json.dumps({
+                                    "type": "action",
+                                    "dat": "closeSpecificSelect"
+                                }))
                             master.nextPlayer()
                         else:
                             self.send_message(
@@ -1230,19 +1291,23 @@ class Player:
                                     "dat": {
                                         "type": "specificSelect",
                                         "dat": {
-                                            "title": f"Welche karte möchtest du haben, die vorherige gibt es nicht (noch {self.i} versuch(e))",
+                                            "title":
+                                            f"Welche karte möchtest du haben, die vorherige gibt es nicht (noch {self.i} versuch(e))",
                                             "options": "_deck",
                                             "type": "card",
                                             "cancel": True
                                         }
                                     }
-                                })
-                            )
+                                }))
                         return
 
-                self.send_message(json.dumps(
-                    {"type": "action", "dat": "closeSpecificSelect"}))
-            elif self.currentAction == "get_name" and data["type"] == "get_name":
+                self.send_message(
+                    json.dumps({
+                        "type": "action",
+                        "dat": "closeSpecificSelect"
+                    }))
+            elif self.currentAction == "get_name" and data[
+                    "type"] == "get_name":
                 if (data["dat"] != ""
                         and data["dat"] not in master.playerNames.values()):
                     self.playerName = data["dat"]
@@ -1293,7 +1358,8 @@ class Player:
             elif data["type"] == "withdraw2x":
                 master.withdraw2x(self.playerId)
             elif data["type"] == "typeStatus":
-                if ("dat3" not in data or data["dat3"] != loginKey) and loginKey != "":
+                if ("dat3" not in data
+                        or data["dat3"] != loginKey) and loginKey != "":
                     self.send_message('{"type":"wrongPass"}')
                     sleep(0.5)
                     self.handle_close()
@@ -1618,6 +1684,7 @@ def add_header(r):
 
 
 class Client():
+
     def __init__(self):
         self.clients = {}
         self.rec = {}
