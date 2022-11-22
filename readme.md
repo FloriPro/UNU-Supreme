@@ -11,3 +11,4 @@ Starten: ```python3 combined.py``` auf port 80
 * ✔ Windows Kommunism: der spieler bekommt die Hälfte der allgemeinen Karten ausgeteilt
 
 _Nicht mit UNO in verbindung_
+Karten bilder von https://commons.m.wikimedia.org/wiki/File:UNO_cards_deck.svg | Creative Commons CC0 1.0 Universal Public Domain Dedication

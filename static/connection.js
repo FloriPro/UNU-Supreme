@@ -442,7 +442,7 @@ async function connect() {
             return;
         }
         else if (data["type"] == "wrongPass") {
-            password = await prompt("UNO password falsch!")
+            password = await prompt("Password falsch!")
             setCookie("p", password, 100);
             reconnect()
         }
@@ -604,7 +604,7 @@ function reconnect() {
 let password;
 async function run() {
     if (getCookie("p") == undefined) {
-        password = await prompt("UNO Password")
+        password = await prompt("Password")
         setCookie("p", password, 100);
     } else {
         password = getCookie("p");
