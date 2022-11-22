@@ -783,7 +783,7 @@ class Player(WebSocket):
 
                         if not secondTime:
                             self.send_message(json.dumps(
-                                {"type": "message", "dat": "Mit UNO-Supreme Verbunden!"}))
+                                {"type": "message", "dat": "Mit UNU-Supreme Verbunden!"}))
                             self.send_message(json.dumps(
                                 {"type": "message", "dat": "Spieler anzahl zurzeit: "+str(len(master.players))}))
 

@@ -1,5 +1,5 @@
-# UNO-Supreme
-Eine spezielle version von UNO, die meine Freunde haben.
+# UNU-Supreme
+Eine spezielle version von UNU, die meine Freunde haben.
 
 Starten: ```python3 combined.py``` auf port 80
 

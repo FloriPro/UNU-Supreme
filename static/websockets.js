@@ -2,7 +2,7 @@ let connections = 0;
 
 let password;
 if (getCookie("p") == undefined) {
-    password = await prompt("UNO Password")
+    password = await prompt("UNU Password")
     setCookie("p", password, 100);
 } else {
     password = getCookie("p");
@@ -166,7 +166,7 @@ class player {
                 return;
             }
             else if (data["type"] == "wrongPass"){
-                password=await prompt("UNO password falsch!")
+                password=await prompt("UNU password falsch!")
                 setCookie("p",password,100);
                 reconnect()
             }

@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "repl_nix_UNO-Supreme"
+name = "repl_nix_UNU-Supreme"
 version = "0.1.0"
 description = ""
 authors = ["Replit user <<>>"]

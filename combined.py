@@ -1336,7 +1336,7 @@ class Player:
                             self.send_message(
                                 json.dumps({
                                     "type": "message",
-                                    "dat": "Mit UNO-Supreme Verbunden!"
+                                    "dat": "Mit UNU-Supreme Verbunden!"
                                 }))
                             self.send_message(
                                 json.dumps({
@@ -1562,21 +1562,21 @@ def consoleEval(dat):
 @app.route('/')
 def projects():
     return render_template("index.html",
-                           title='UNO Supreme',
+                           title='UNU Supreme',
                            serverHost=serverHost)
 
 
 @app.route('/many')
 def many():
     return render_template("many.html",
-                           title='UNO Supreme',
+                           title='UNU Supreme',
                            serverHost=serverHost)
 
 
 @app.route('/wsT')
 def wsT():
     return render_template("websocketTester.html",
-                           title='UNO Supreme',
+                           title='UNU Supreme',
                            serverHost=serverHost)
 
 

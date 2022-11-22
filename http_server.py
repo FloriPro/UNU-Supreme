@@ -13,17 +13,17 @@ serverHost = "ws://${location.hostname}:8000"  # ${location.hostname}
 
 @app.route('/')
 def projects():
-    return render_template("index.html", title='UNO Supreme', serverHost=serverHost)
+    return render_template("index.html", title='UNU Supreme', serverHost=serverHost)
 
 
 @app.route('/many')
 def many():
-    return render_template("many.html", title='UNO Supreme', serverHost=serverHost)
+    return render_template("many.html", title='UNU Supreme', serverHost=serverHost)
 
 
 @app.route('/wsT')
 def wsT():
-    return render_template("websocketTester.html", title='UNO Supreme', serverHost=serverHost)
+    return render_template("websocketTester.html", title='UNU Supreme', serverHost=serverHost)
 
 @app.route('/console')
 def console():
