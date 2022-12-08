@@ -50,7 +50,7 @@
             ws.send(JSON.stringify({ "type": "eval", "dat": command }))
         }
         function run() {
-            var command = document.querySelector("input").value;
+            var command = document.querySelector("#command").value;
             for (var x of command.split(";")) {
                 exec(x);
             }
@@ -95,7 +95,7 @@
         <li>players</li>
         <li>get &lt;player-Id&gt;</li>
     </ul>
-    <input placeholder="command" style="width: calc(100% - 100px);">
+    <input placeholder="command" id="command" style="width: calc(100% - 100px);">
     <button onclick="run()">Run</button>
     <div id="consoleList">
         <p id="out">connecting...</p>

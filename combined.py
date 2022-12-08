@@ -622,6 +622,9 @@ class gameMaster:
                             }
                         }
                     }))
+            elif self.isThisCombo(card, ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"], playerId, False):
+                self.playerWin(playerId)
+                return
             elif self.isThisCombo(card, [
                     "yellow_komunist", "blue_komunist", "green_komunist",
                     "red_komunist"
@@ -1225,11 +1228,13 @@ class Player:
                     # get all users that have the specified card and select a random user
                     availableUsers = []
                     for x in master.players:
-                        for y in master.playerDeck[x]:
-                            if y == data["dat"]:
-                                if x not in availableUsers:
-                                    availableUsers.append(x)
+                        if x != self.playerId:
+                            for y in master.playerDeck[x]:
+                                if y == data["dat"]:
+                                    if x not in availableUsers:
+                                        availableUsers.append(x)
                     if len(availableUsers) == 0:
+                        # no cards available! send message and return
                         self.send_message(
                             json.dumps({
                                 "type":
@@ -1244,7 +1249,7 @@ class Player:
                                     "type": "specificSelect",
                                     "dat": {
                                         "title":
-                                        f"Welche karte möchtest du haben, die vorherige gibt es nicht (noch {self.i} versuch(e))",
+                                        f"Welche karte möchtest du haben, die vorherige gibt es nicht. (noch {self.i} versuch(e))",
                                         "options": "_deck",
                                         "type": "card",
                                         "cancel": True
@@ -1253,9 +1258,12 @@ class Player:
                             }))
                         return
                     else:
+                        # select random user
                         selectedUser = availableUsers[randint(
                             0,
                             len(availableUsers) - 1)]
+
+                        # remove card from player and add to self player
                         master.playerDeck[selectedUser].remove(data["dat"])
                         if len(master.playerDeck[selectedUser]) == 0:
                             master.playerWin(selectedUser)
@@ -1275,6 +1283,10 @@ class Player:
                                     "dat": data["dat"]
                                 }
                             })
+
+                        # tell all players to update the player card count
+                        master.easyEvents("playerCardCount")
+
                         self.i -= 1
                         if self.i <= 0:
                             self.currentAction = ""
@@ -1292,7 +1304,7 @@ class Player:
                                         "type": "specificSelect",
                                         "dat": {
                                             "title":
-                                            f"Welche karte möchtest du haben, die vorherige gibt es nicht (noch {self.i} versuch(e))",
+                                            f"Welche karte möchtest du haben? (noch {self.i} versuch(e))",
                                             "options": "_deck",
                                             "type": "card",
                                             "cancel": True

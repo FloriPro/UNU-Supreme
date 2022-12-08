@@ -1,7 +1,7 @@
 const rot = 40;
 const colors = ["red", "green", "blue", "yellow"];
 const windowsCombos = ["aussetzen", "richtungswechsel", "komunist"];
-const otherCombos = [["9", "6"], ["0", "2", "4"]]
+const otherCombos = [["9", "6"], ["0", "2", "4"], ['9', '8', '7', '6', '5', '4', '3', '2', '1', '0']];
 
 let wantsType = "player";
 /**

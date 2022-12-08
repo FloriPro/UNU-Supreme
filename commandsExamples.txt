@@ -11,3 +11,6 @@ give green_2+ {0};give green_2+ {0};give green_aussetzen {0};give green_7 {0}
 
 //test windows_aussetzen
 start;give yellow_2+ {1};give yellow_aussetzen {0};give green_aussetzen {0};give red_aussetzen {0};give blue_aussetzen {0};give green_2+ {0};give green_2+ {0};give green_aussetzen {0};give green_7 {0}
+
+//0-9 Straße
+give yellow_0 {0};give yellow_1 {0};give yellow_2 {0};give yellow_3 {0};give yellow_4 {0};give yellow_5 {0};give yellow_6 {0};give yellow_7 {0};give yellow_8 {0};give yellow_9 {0};
