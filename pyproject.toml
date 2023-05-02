@@ -7,7 +7,7 @@ authors = ["Replit user <<>>"]
 [tool.poetry.dependencies]
 python = "^3.8"
 simple-websocket-server = "^0.4.2"
-Flask = "^2.2.2"
+Flask = "^2.3.2"
 Pillow = "^9.3.0"
 flask-sock = "^0.5.2"
 
